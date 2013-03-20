@@ -91,7 +91,10 @@ compute (PyObject*, PyObject* args)
 {
   Function* function = 0;
   PyObject* x = 0;
-  if (!PyArg_ParseTuple(args, "O&O", detail::functionConverter, &function, &x))
+  PyObject* result = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&OO",
+       detail::functionConverter, &function, &x, &result))
     return 0;
   if (!function)
     {
@@ -102,14 +105,14 @@ compute (PyObject*, PyObject* args)
     }
 
   npy_intp dims = static_cast<npy_intp> (function->outputSize ());
-  PyObject* result =
-    PyArray_SimpleNew (1, &dims, PyArray_FLOAT32);
+  PyObject* resultNumpy =
+    PyArray_FROM_OTF(result, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
 
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
   PyObject* xNumpy =
-    PyArray_FromAny (x, 0, 1, 1, NPY_C_CONTIGUOUS, 0);
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
   if (!xNumpy)
     {
       PyErr_SetString
@@ -123,16 +126,14 @@ compute (PyObject*, PyObject* args)
     (static_cast<double*> (PyArray_DATA (xNumpy)), function->inputSize ());
 
   // Directly map Eigen result to the numpy array data.
-  Eigen::Map<Function::result_t> res
-    (static_cast<double*> (PyArray_DATA (result)), function->outputSize ());
+  Eigen::Map<Function::result_t> resultEigen
+    (static_cast<double*>
+     (PyArray_DATA (resultNumpy)), function->outputSize ());
 
-  res = (*function) (xEigen);
+  resultEigen = (*function) (xEigen);
 
-  std::cout << xEigen << std::endl;
-  std::cout << res << std::endl;
-  std::cout << static_cast<double*> (PyArray_DATA (result))[0] << std::endl;
-
-  return result;
+  Py_INCREF(Py_None);
+  return Py_None;
 }
 
 
