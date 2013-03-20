@@ -81,22 +81,22 @@ namespace roboptim
 
 	  PyObject* resultPy = PyEval_CallObject (computeCallback_, arglist);
 	  Py_DECREF (arglist);
-	  if (!resultPy)
-	    return;
-	  Py_DECREF(resultPy);
+	  Py_XDECREF(resultPy);
 	}
 
 	void
 	setComputeCallback (PyObject* callback)
 	{
+	  if (callback == computeCallback_)
+	    return;
+
 	  if (computeCallback_)
 	    {
 	      Py_DECREF (computeCallback_);
 	      computeCallback_ = 0;
 	    }
 
-	  if (callback)
-	    Py_INCREF (callback);
+	  Py_XINCREF (callback);
 	  computeCallback_ = callback;
 	}
 
@@ -119,6 +119,15 @@ namespace roboptim
 	{
 	}
 
+	virtual ~DifferentiableFunction () throw ()
+	{
+	  if (gradientCallback_)
+	    {
+	      Py_DECREF (gradientCallback_);
+	      gradientCallback_ = 0;
+	    }
+	}
+
 	virtual void impl_compute (result_t& result, const argument_t& argument)
 	  const throw ()
 	{
@@ -131,6 +140,20 @@ namespace roboptim
 	  const throw ()
 	{
 	  gradient = argument;
+	}
+
+
+	void
+	setGradientCallback (PyObject* callback)
+	{
+	  if (gradientCallback_)
+	    {
+	      Py_DECREF (gradientCallback_);
+	      gradientCallback_ = 0;
+	    }
+
+	  Py_XINCREF (callback);
+	  gradientCallback_ = callback;
 	}
 
       private:
@@ -191,7 +214,7 @@ createFunction (PyObject*, PyObject* args)
     return 0;
 
   std::string name_ = (name) ? name : "";
-  Function* function = new Function (inSize, outSize, name_);
+  T* function = new T (inSize, outSize, name_);
 
   PyObject* functionPy =
     PyCapsule_New (function, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
@@ -287,6 +310,50 @@ bindCompute (PyObject*, PyObject* args)
   return Py_None;
 }
 
+static PyObject*
+bindGradient (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  PyObject* callback = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O:bindGradient",
+       detail::functionConverter, &function, &callback))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+
+  DifferentiableFunction* dfunction
+    = dynamic_cast<DifferentiableFunction*> (function);
+  std::cout << "foo" << dfunction << std::endl;
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "instance of DifferentiableFunction expected as first argument");
+      return 0;
+    }
+  if (!callback)
+    {
+      PyErr_SetString (PyExc_TypeError, "Failed to retrieve callback object");
+      return 0;
+    }
+  if (!PyCallable_Check (callback))
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be callable");
+      return 0;
+    }
+
+  dfunction->setGradientCallback (callback);
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
 
 static PyMethodDef RobOptimCoreMethods[] =
   {
@@ -298,6 +365,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Evaluate a function."},
     {"bindCompute",  bindCompute, METH_VARARGS,
      "Bind a Python function to function computation."},
+    {"bindGradient",  bindGradient, METH_VARARGS,
+     "Bind a Python function to gradient computation."},
     {0, 0, 0, 0}
   };
 
