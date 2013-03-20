@@ -3,6 +3,7 @@
 #include <numpy/arrayobject.h>
 #include <numpy/ndarraytypes.h>
 #include <roboptim/core/function.hh>
+#include <roboptim/core/differentiable-function.hh>
 
 namespace roboptim
 {
@@ -21,7 +22,7 @@ namespace roboptim
 	{
 	}
 
-	~Function () throw ()
+	virtual ~Function () throw ()
 	{
 	  if (computeCallback_)
 	    {
@@ -102,11 +103,46 @@ namespace roboptim
       private:
 	PyObject* computeCallback_;
       };
+
+      class DifferentiableFunction
+	: public ::roboptim::DifferentiableFunction,
+	  public ::roboptim::core::python::Function
+      {
+      public:
+	explicit DifferentiableFunction (size_type inputSize,
+					 size_type outputSize,
+					 const std::string& name)
+	  : roboptim::DifferentiableFunction (inputSize, outputSize, name),
+	    Function (inputSize, outputSize, name),
+	    gradientCallback_ (0),
+	    jacobianCallback_ (0)
+	{
+	}
+
+	virtual void impl_compute (result_t& result, const argument_t& argument)
+	  const throw ()
+	{
+	  ::roboptim::core::python::Function::impl_compute (result, argument);
+	}
+
+	virtual void impl_gradient (gradient_t& gradient,
+				    const argument_t& argument,
+				    size_type /*functionId*/)
+	  const throw ()
+	{
+	  gradient = argument;
+	}
+
+      private:
+	PyObject* gradientCallback_;
+	PyObject* jacobianCallback_;
+      };
     } // end of namespace python.
   } // end of namespace core.
 } // end of namespace roboptim.
 
 using roboptim::core::python::Function;
+using roboptim::core::python::DifferentiableFunction;
 
 static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
   "roboptim_core_function";
@@ -143,6 +179,7 @@ namespace detail
   }
 } // end of namespace detail.
 
+template <typename T>
 static PyObject*
 createFunction (PyObject*, PyObject* args)
 {
@@ -158,7 +195,7 @@ createFunction (PyObject*, PyObject* args)
 
   PyObject* functionPy =
     PyCapsule_New (function, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
-		   &detail::destructor<Function>);
+		   &detail::destructor<T>);
   return functionPy;
 }
 
@@ -180,7 +217,6 @@ compute (PyObject*, PyObject* args)
       return 0;
     }
 
-  npy_intp dims = static_cast<npy_intp> (function->outputSize ());
   PyObject* resultNumpy =
     PyArray_FROM_OTF(result, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
 
@@ -254,8 +290,10 @@ bindCompute (PyObject*, PyObject* args)
 
 static PyMethodDef RobOptimCoreMethods[] =
   {
-    {"Function",  createFunction, METH_VARARGS,
+    {"Function",  createFunction<Function>, METH_VARARGS,
      "Create a Function object."},
+    {"DifferentiableFunction",  createFunction<DifferentiableFunction>,
+     METH_VARARGS, "Create a DifferentiableFunction object."},
     {"compute",  compute, METH_VARARGS,
      "Evaluate a function."},
     {"bindCompute",  bindCompute, METH_VARARGS,

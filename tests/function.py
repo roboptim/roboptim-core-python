@@ -6,6 +6,8 @@ import numpy
 class TestFunction(unittest.TestCase):
     def test_create(self):
         self.assertIsNotNone(roboptim.core.Function (1, 1, "test function"))
+        self.assertIsNotNone(
+            roboptim.core.DifferentiableFunction (1, 1, "test function"))
 
     def test_badcreate(self):
         self.assertRaises(TypeError, roboptim.core.Function, ())
@@ -37,6 +39,19 @@ class TestFunction(unittest.TestCase):
         roboptim.core.compute (f, x, result)
         self.assertEqual (x[0], -10.)
         self.assertEqual (result, [-20.,])
+
+        # Check with differentiable function
+        f = roboptim.core.DifferentiableFunction (1, 1, "test function")
+        roboptim.core.bindCompute(f, compute)
+
+        x = [15.,]
+        result = numpy.array([0.,])
+
+        roboptim.core.compute (f, x, result)
+
+        self.assertEqual (x, [15.,])
+        self.assertEqual (result, [30.,])
+
 
     def test_badcompute(self):
         def badcallback():
