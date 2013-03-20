@@ -18,9 +18,8 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 INCLUDE(cmake/base.cmake)
 INCLUDE(cmake/boost.cmake)
-INCLUDE(cmake/lapack.cmake)
-INCLUDE(cmake/cpack.cmake)
 INCLUDE(cmake/eigen.cmake)
+INCLUDE(cmake/python.cmake)
 
 SET(PROJECT_NAME roboptim-core-python)
 SET(PROJECT_DESCRIPTION "RobOptim Core Python")
@@ -29,10 +28,23 @@ SET(PROJECT_URL "http://github.com/roboptim/roboptim-core-python")
 SET(HEADERS
   )
 
+SET(CXX_DISABLE_WERROR 1) #FIXME: disable for now.
+
 SETUP_PROJECT()
 
 # Search for dependencies.
 SEARCH_FOR_BOOST()
+ADD_REQUIRED_DEPENDENCY("roboptim-core >= 0.5")
+
+# Look for Python.
+FINDPYTHON()
+
+# Detect numpy.
+EXECUTE_PROCESS(
+  COMMAND "${PYTHON_EXECUTABLE}" "-c"
+  "import numpy; print (numpy.get_include())"
+  OUTPUT_VARIABLE NUMPY_INCLUDE_DIRS
+  ERROR_QUIET)
 
 HEADER_INSTALL("${HEADERS}")
 
