@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include <numpy/ndarraytypes.h>
@@ -15,16 +16,91 @@ namespace roboptim
 	explicit Function (size_type inputSize,
 			   size_type outputSize,
 			   const std::string& name)
-	  : roboptim::Function (inputSize, outputSize, name)
+	  : roboptim::Function (inputSize, outputSize, name),
+	    computeCallback_ (0)
 	{
+	}
+
+	~Function () throw ()
+	{
+	  if (computeCallback_)
+	    {
+	      Py_DECREF (computeCallback_);
+	      computeCallback_ = 0;
+	    }
 	}
 
 	virtual void
 	impl_compute (result_t& result, const argument_t& argument)
 	  const throw ()
 	{
-	  result[0] = 2 * argument[0]; //FIXME:
+	  if (!computeCallback_)
+	    {
+	      PyErr_SetString
+		(PyExc_TypeError,
+		 "compute callback not set");
+	      return;
+	    }
+	  if (!PyFunction_Check (computeCallback_))
+	    {
+	      PyErr_SetString
+		(PyExc_TypeError,
+		 "compute callback is not a function");
+	      return;
+	    }
+
+	  npy_intp inputSize = static_cast<npy_intp> (this->inputSize ());
+	  npy_intp outputSize = static_cast<npy_intp> (this->outputSize ());
+
+	  PyObject* resultNumpy =
+	    PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, &result[0]);
+	  if (!resultNumpy)
+	    {
+	      PyErr_SetString (PyExc_TypeError, "cannot convert result");
+	      return;
+	    }
+
+	  PyObject* argNumpy =
+	    PyArray_SimpleNewFromData
+	    (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	  if (!argNumpy)
+	    {
+	      PyErr_SetString (PyExc_TypeError, "cannot convert argument");
+	      return;
+	    }
+
+	  PyObject* arglist = Py_BuildValue ("(OO)", resultNumpy, argNumpy);
+	  if (!arglist)
+	    {
+	      Py_DECREF (arglist);
+	      PyErr_SetString
+		(PyExc_TypeError, "failed to build argument list");
+	      return;
+	    }
+
+	  PyObject* resultPy = PyEval_CallObject (computeCallback_, arglist);
+	  Py_DECREF (arglist);
+	  if (!resultPy)
+	    return;
+	  Py_DECREF(resultPy);
 	}
+
+	void
+	setComputeCallback (PyObject* callback)
+	{
+	  if (computeCallback_)
+	    {
+	      Py_DECREF (computeCallback_);
+	      computeCallback_ = 0;
+	    }
+
+	  if (callback)
+	    Py_INCREF (callback);
+	  computeCallback_ = callback;
+	}
+
+      private:
+	PyObject* computeCallback_;
       };
     } // end of namespace python.
   } // end of namespace core.
@@ -131,6 +207,45 @@ compute (PyObject*, PyObject* args)
      (PyArray_DATA (resultNumpy)), function->outputSize ());
 
   resultEigen = (*function) (xEigen);
+  if (PyErr_Occurred ())
+    return 0;
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject*
+bindCompute (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  PyObject* callback = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O:bindCompute",
+       detail::functionConverter, &function, &callback))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+  if (!callback)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve callback object");
+      return 0;
+    }
+  if (!PyCallable_Check (callback))
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "2nd argument must be callable");
+      return 0;
+    }
+
+  function->setComputeCallback (callback);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -143,6 +258,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Create a Function object."},
     {"compute",  compute, METH_VARARGS,
      "Evaluate a function."},
+    {"bindCompute",  bindCompute, METH_VARARGS,
+     "Bind a Python function to function computation."},
     {0, 0, 0, 0}
   };
 
