@@ -2,9 +2,14 @@
 #include <Python.h>
 #include <numpy/arrayobject.h>
 #include <numpy/ndarraytypes.h>
-#include <roboptim/core/function.hh>
+
 #include <roboptim/core/differentiable-function.hh>
+#include <roboptim/core/function.hh>
+#include <roboptim/core/io.hh>
+#include <roboptim/core/linear-function.hh>
 #include <roboptim/core/problem.hh>
+#include <roboptim/core/solver-factory.hh>
+#include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
 
 namespace roboptim
@@ -292,16 +297,57 @@ static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
   "roboptim_core_function";
 static const char* ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME =
   "roboptim_core_problem";
+static const char* ROBOPTIM_CORE_SOLVER_CAPSULE_NAME =
+  "roboptim_core_solver";
+
+typedef roboptim::Problem<
+  ::roboptim::DifferentiableFunction,
+  boost::mpl::vector< ::roboptim::LinearFunction,
+		      ::roboptim::DifferentiableFunction> >
+problem_t;
+
+typedef roboptim::Solver<
+  ::roboptim::DifferentiableFunction,
+  boost::mpl::vector< ::roboptim::LinearFunction,
+		      ::roboptim::DifferentiableFunction> >
+			  solver_t;
+
+typedef roboptim::SolverFactory<solver_t> factory_t;
 
 namespace detail
 {
   template <typename T>
-  static void destructor (PyObject* obj)
+  void destructor (PyObject* obj);
+
+  template <>
+  void destructor<problem_t> (PyObject* obj)
+  {
+    problem_t* ptr = static_cast<problem_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
+  void destructor<factory_t> (PyObject* obj)
+  {
+    factory_t* ptr = static_cast<factory_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <typename T>
+  void destructor (PyObject* obj)
   {
     T* ptr = static_cast<T*>
       (PyCapsule_GetPointer
        (obj, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME));
-    assert (ptr && "failed to retrieve pointer from capsulte");
+    assert (ptr && "failed to retrieve pointer from capsule");
     if (ptr)
       delete ptr;
   }
@@ -318,6 +364,24 @@ namespace detail
 	PyErr_SetString
 	  (PyExc_TypeError,
 	   "Function object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  problemConverter (PyObject* obj, problem_t** address)
+  {
+    assert (address);
+    problem_t* ptr = static_cast<problem_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "Problem object expected but another type was passed");
 	return 0;
       }
     *address = ptr;
@@ -348,10 +412,6 @@ createFunction (PyObject*, PyObject* args)
 static PyObject*
 createProblem (PyObject*, PyObject* args)
 {
-  typedef roboptim::Problem< ::roboptim::DifferentiableFunction,
-    boost::mpl::vector< ::roboptim::LinearFunction,
-			::roboptim::DifferentiableFunction> >
-    problem_t;
   Function* costFunction = 0;
   if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &costFunction))
     return 0;
@@ -374,6 +434,34 @@ createProblem (PyObject*, PyObject* args)
   return problemPy;
 }
 
+static PyObject*
+createSolver (PyObject*, PyObject* args)
+{
+  char* pluginName = 0;
+  problem_t* problem = 0;
+  if (!PyArg_ParseTuple (args, "sO&",
+			 &pluginName,
+			 &detail::problemConverter, &problem))
+    return 0;
+
+  factory_t* factory = 0;
+
+  try
+    {
+      factory = new factory_t (pluginName, *problem);
+    }
+  catch (...)
+    {
+      delete factory;
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  PyObject* solverPy =
+    PyCapsule_New (factory, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME,
+		   &detail::destructor<factory_t>);
+  return solverPy;
+}
 
 static PyObject*
 compute (PyObject*, PyObject* args)
@@ -581,6 +669,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      METH_VARARGS, "Create a TwiceDifferentiableFunction object."},
     {"Problem",  createProblem, METH_VARARGS,
      "Create a Problem object."},
+    {"Solver",  createSolver, METH_VARARGS,
+     "Create a Solver object through the solver factory."},
     {"compute",  compute, METH_VARARGS,
      "Evaluate a function."},
     {"gradient",  gradient, METH_VARARGS,

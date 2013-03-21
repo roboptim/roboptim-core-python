@@ -92,7 +92,31 @@ class TestFunction(unittest.TestCase):
         roboptim.core.gradient (f, gradient, x, 0)
         self.assertEqual (gradient, [2.,])
 
+    def test_problem(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2
 
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        problem = roboptim.core.Problem (f)
+
+    def test_solver(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        problem = roboptim.core.Problem (f)
+
+        solver = roboptim.core.Solver ("ipopt", problem)
 
 if __name__ == '__main__':
     unittest.main()
