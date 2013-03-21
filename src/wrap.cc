@@ -890,6 +890,50 @@ setStartingPoint (PyObject*, PyObject* args)
   return Py_None;
 }
 
+static PyObject*
+addConstraint (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  Function* function = 0;
+  double min = 0.;
+  double max = 0.;
+
+  if (!PyArg_ParseTuple
+      (args, "O&O&(dd)",
+       &detail::problemConverter, &problem,
+       &detail::functionConverter, &function,
+       &min, &max))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+  if (!function)
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be a function");
+      return 0;
+    }
+
+  DifferentiableFunction* dfunction =
+    dynamic_cast<DifferentiableFunction*> (function);
+
+  if (!dfunction)
+    {
+      PyErr_SetString (PyExc_TypeError,
+		       "2nd argument must be a differentiable function");
+      return 0;
+    }
+
+  //FIXME: this will make everything segv.
+  //contraint will be freed when problem disappear...
+  // boost::shared_ptr<DifferentiableFunction> constraint (dfunction);
+  // problem->addConstraint (constraint, Function::makeInterval (min, max));
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 
 static PyObject*
 solve (PyObject*, PyObject* args)
@@ -1116,6 +1160,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the problem starting point."},
     {"setStartingPoint", setStartingPoint, METH_VARARGS,
      "Set the problem starting point."},
+    {"addConstraint", addConstraint, METH_VARARGS,
+     "Add a constraint to the problem."},
 
     {"solve",  solve, METH_VARARGS,
      "Solve the optimization problem."},
