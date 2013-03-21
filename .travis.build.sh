@@ -35,4 +35,6 @@ cd "$build_dir"
 cmake "$root_dir" -DCMAKE_INSTALL_PREFIX="$install_dir"
 make
 make install
+$root_dir/tests/wrap.py
+$root_dir/tests/function.py
 make test
