@@ -2,21 +2,30 @@
 
 # Directories.
 root_dir=`pwd`
-build_dir=$root_dir/build
-core_dir=$build_dir/roboptim-core
+build_dir="$root_dir/build"
+core_dir="$build_dir/roboptim-core"
+
+# Shortcuts.
+git_clone="git clone --quiet --recursive --depth 1"
 
 # Create layout.
-mkdir -p $build_dir
+rm -rf "$build_dir"
+mkdir -p "$build_dir"
+
+# Setup environment variables.
+export PKG_CONFIG_PATH="$install_dir/lib/pkgconfig:$PKG_CONFIG_PATH"
 
 # Checkout roboptim-core
-cd $build_dir
-git clone --recursive git://github.com/roboptim/roboptim-core.git
-cd $core_dir
-cmake . -DCMAKE_INSTALL_PREFIX=$install_dir
+echo "Installing dependencies..."
+cd "$build_dir"
+$git_clone "git://github.com/roboptim/roboptim-core.git"
+cd "$core_dir"
+cmake . -DCMAKE_INSTALL_PREFIX:STRING="$install_dir"
 make install
 
 # Build package
-cd $build_dir
-cmake $root_dir -DCMAKE_INSTALL_PREFIX=$install_dir
+echo "Building package..."
+cd "$build_dir"
+cmake "$root_dir" -DCMAKE_INSTALL_PREFIX="$install_dir"
 make
 make test
