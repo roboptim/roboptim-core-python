@@ -118,5 +118,7 @@ class TestFunction(unittest.TestCase):
 
         solver = roboptim.core.Solver ("ipopt", problem)
 
+        roboptim.core.solve (solver)
+
 if __name__ == '__main__':
     unittest.main()

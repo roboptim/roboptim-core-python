@@ -387,6 +387,24 @@ namespace detail
     *address = ptr;
     return 1;
   }
+
+  int
+  factoryConverter (PyObject* obj, factory_t** address)
+  {
+    assert (address);
+    factory_t* ptr = static_cast<factory_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "Problem object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
 } // end of namespace detail.
 
 template <typename T>
@@ -659,6 +677,20 @@ bindGradient (PyObject*, PyObject* args)
 }
 
 
+
+static PyObject*
+solve (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::factoryConverter, &factory))
+    return 0;
+
+  (*factory) ().solve ();
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 static PyMethodDef RobOptimCoreMethods[] =
   {
     {"Function",  createFunction<Function>, METH_VARARGS,
@@ -679,6 +711,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Bind a Python function to function computation."},
     {"bindGradient",  bindGradient, METH_VARARGS,
      "Bind a Python function to gradient computation."},
+    {"solve",  solve, METH_VARARGS,
+     "Solve the optimization problem."},
     {0, 0, 0, 0}
   };
 
