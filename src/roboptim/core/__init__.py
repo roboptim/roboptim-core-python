@@ -80,6 +80,14 @@ class PyProblem(object):
     def __str__ (self):
         return strProblem (self._problem)
 
+    @property
+    def startingPoint(self):
+        return getStartingPoint (self._problem)
+
+    @startingPoint.setter
+    def startingPoint(self, value):
+        setStartingPoint (self._problem, value)
+
     def addConstraint (self):
         pass #FIXME:
 

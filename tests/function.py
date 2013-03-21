@@ -53,17 +53,18 @@ class TestFunctionPy(unittest.TestCase):
     def test_solver(self):
         cost = Square()
         problem = roboptim.core.PyProblem (cost)
+        self.assertFalse (problem.startingPoint)
+        problem.startingPoint = numpy.array([0.,])
+        self.assertEqual (problem.startingPoint, [0.])
 
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)
-            print (solver)
             solver.solve ()
         except:
             print ("ipopt solver not available, passing...")
 
         solver = roboptim.core.PySolver ("ipopt", problem)
-        print (solver)
         solver.solve ()
         r = solver.minimum ()
         print (r)

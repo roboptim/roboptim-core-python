@@ -821,6 +821,74 @@ bindGradient (PyObject*, PyObject* args)
   return Py_None;
 }
 
+static PyObject*
+getStartingPoint (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  if (!PyArg_ParseTuple (args, "O&", &detail::problemConverter, &problem))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+
+  npy_intp inputSize =
+    static_cast<npy_intp> (problem->function ().inputSize ());
+
+  PyObject* startingPoint = PyArray_SimpleNew(1, &inputSize, NPY_DOUBLE);
+  Eigen::Map<Function::vector_t> startingPointEigen
+    (static_cast<double*>
+     (PyArray_DATA (startingPoint)), problem->function ().inputSize ());
+
+  if (!problem->startingPoint ())
+    {
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  startingPointEigen = *(problem->startingPoint ());
+  return startingPoint;
+}
+
+static PyObject*
+setStartingPoint (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  PyObject* startingPoint = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O", &detail::problemConverter, &problem, &startingPoint))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+  PyObject* startingPointNumpy =
+    PyArray_FROM_OTF
+    (startingPoint, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+  if (!startingPointNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError,
+		       "failed to build numpy array from 2st argument");
+      return 0;
+    }
+
+  if (PyArray_DIM (startingPointNumpy, 0) != problem->function ().inputSize ())
+    {
+      PyErr_SetString (PyExc_TypeError, "invalid size");
+      return 0;
+    }
+
+  Eigen::Map<Function::argument_t> startingPointEigen
+    (static_cast<double*> (PyArray_DATA (startingPointNumpy)),
+     problem->function ().inputSize ());
+
+  problem->startingPoint () = startingPointEigen;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
 
 
 static PyObject*
@@ -1043,6 +1111,12 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Bind a Python function to function computation."},
     {"bindGradient",  bindGradient, METH_VARARGS,
      "Bind a Python function to gradient computation."},
+
+    {"getStartingPoint", getStartingPoint, METH_VARARGS,
+     "Get the problem starting point."},
+    {"setStartingPoint", setStartingPoint, METH_VARARGS,
+     "Set the problem starting point."},
+
     {"solve",  solve, METH_VARARGS,
      "Solve the optimization problem."},
     {"minimum",  minimum, METH_VARARGS,
