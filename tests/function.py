@@ -19,6 +19,9 @@ class TestFunction(unittest.TestCase):
         f = roboptim.core.Function (1, 1, "test function")
         roboptim.core.bindCompute(f, compute)
 
+        self.assertEquals (roboptim.core.strFunction (f),
+                           "test function (not differentiable)")
+
         # Check computation with sequences.
         x = [42.,]
         result = numpy.array([0.,])
@@ -43,6 +46,10 @@ class TestFunction(unittest.TestCase):
         # Check with differentiable function
         f = roboptim.core.DifferentiableFunction (1, 1, "test function")
         roboptim.core.bindCompute(f, compute)
+
+        #FIXME: why is it so?!
+        self.assertEquals (roboptim.core.strFunction (f),
+                           "test function (not differentiable)")
 
         x = [15.,]
         result = numpy.array([0.,])
@@ -103,6 +110,7 @@ class TestFunction(unittest.TestCase):
         roboptim.core.bindGradient(f, gradient)
 
         problem = roboptim.core.Problem (f)
+        self.assertTrue(roboptim.core.strProblem (problem))
 
     def test_solver(self):
         def compute(result, x):
@@ -117,7 +125,7 @@ class TestFunction(unittest.TestCase):
         problem = roboptim.core.Problem (f)
 
         solver = roboptim.core.Solver ("ipopt", problem)
-
+        self.assertTrue(roboptim.core.strSolver (solver))
         roboptim.core.solve (solver)
 
 if __name__ == '__main__':

@@ -691,6 +691,70 @@ solve (PyObject*, PyObject* args)
   return Py_None;
 }
 
+template <typename T>
+static PyObject*
+print (PyObject*, PyObject* args);
+
+template <>
+static PyObject*
+print<problem_t> (PyObject*, PyObject* args)
+{
+  problem_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::problemConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << *obj;
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <>
+static PyObject*
+print<factory_t> (PyObject*, PyObject* args)
+{
+  factory_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::factoryConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << (*obj) ();
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <typename T>
+static PyObject*
+print (PyObject*, PyObject* args)
+{
+  T* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::functionConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << *obj;
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
 static PyMethodDef RobOptimCoreMethods[] =
   {
     {"Function",  createFunction<Function>, METH_VARARGS,
@@ -713,6 +777,12 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Bind a Python function to gradient computation."},
     {"solve",  solve, METH_VARARGS,
      "Solve the optimization problem."},
+    {"strFunction",  print<Function>, METH_VARARGS,
+     "Print a function as a Python string."},
+    {"strProblem",  print<problem_t>, METH_VARARGS,
+     "Print a problem as a Python string."},
+    {"strSolver",  print<factory_t>, METH_VARARGS,
+     "Print a solver as a Python string."},
     {0, 0, 0, 0}
   };
 
