@@ -34,4 +34,5 @@ echo "Building package..."
 cd "$build_dir"
 cmake "$root_dir" -DCMAKE_INSTALL_PREFIX="$install_dir"
 make
+make install
 make test
