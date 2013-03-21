@@ -29,9 +29,6 @@ cd "$core_dir"
 cmake . -DCMAKE_INSTALL_PREFIX:STRING="$install_dir"
 make install
 
-echo $PKG_CONFIG_PATH
-ls "$install_dir/lib/pkgconfig"
-
 # Build package
 echo "Building package..."
 cd "$build_dir"
