@@ -428,6 +428,54 @@ createFunction (PyObject*, PyObject* args)
 }
 
 static PyObject*
+inputSize (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a function object");
+      return 0;
+    }
+  return Py_BuildValue("i", function->inputSize ());
+}
+
+static PyObject*
+outputSize (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a function object");
+      return 0;
+    }
+  return Py_BuildValue("i", function->outputSize ());
+}
+
+static PyObject*
+getName (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a function object");
+      return 0;
+    }
+  return Py_BuildValue("s", function->getName ().c_str ());
+}
+
+static PyObject*
 createProblem (PyObject*, PyObject* args)
 {
   Function* costFunction = 0;
@@ -692,11 +740,11 @@ solve (PyObject*, PyObject* args)
 }
 
 template <typename T>
-static PyObject*
+PyObject*
 print (PyObject*, PyObject* args);
 
 template <>
-static PyObject*
+PyObject*
 print<problem_t> (PyObject*, PyObject* args)
 {
   problem_t* obj = 0;
@@ -716,7 +764,7 @@ print<problem_t> (PyObject*, PyObject* args)
 }
 
 template <>
-static PyObject*
+PyObject*
 print<factory_t> (PyObject*, PyObject* args)
 {
   factory_t* obj = 0;
@@ -736,7 +784,7 @@ print<factory_t> (PyObject*, PyObject* args)
 }
 
 template <typename T>
-static PyObject*
+PyObject*
 print (PyObject*, PyObject* args)
 {
   T* obj = 0;
@@ -759,6 +807,13 @@ static PyMethodDef RobOptimCoreMethods[] =
   {
     {"Function",  createFunction<Function>, METH_VARARGS,
      "Create a Function object."},
+    {"inputSize",  inputSize, METH_VARARGS,
+     "Return function input size."},
+    {"outputSize",  outputSize, METH_VARARGS,
+     "Return function output size."},
+    {"getName",  getName, METH_VARARGS,
+     "Return function name."},
+
     {"DifferentiableFunction",  createFunction<DifferentiableFunction>,
      METH_VARARGS, "Create a DifferentiableFunction object."},
     {"TwiceDifferentiableFunction", createFunction<TwiceDifferentiableFunction>,
@@ -787,11 +842,11 @@ static PyMethodDef RobOptimCoreMethods[] =
   };
 
 PyMODINIT_FUNC
-initcore ()
+initwrap ()
 {
   PyObject* m = 0;
 
-  m = Py_InitModule("core", RobOptimCoreMethods);
+  m = Py_InitModule("wrap", RobOptimCoreMethods);
 
   // Initialize numpy.
   import_array ();
