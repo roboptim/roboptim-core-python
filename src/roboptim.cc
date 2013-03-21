@@ -4,6 +4,8 @@
 #include <numpy/ndarraytypes.h>
 #include <roboptim/core/function.hh>
 #include <roboptim/core/differentiable-function.hh>
+#include <roboptim/core/problem.hh>
+#include <roboptim/core/twice-differentiable-function.hh>
 
 namespace roboptim
 {
@@ -126,6 +128,11 @@ namespace roboptim
 	      Py_DECREF (gradientCallback_);
 	      gradientCallback_ = 0;
 	    }
+	  if (jacobianCallback_)
+	    {
+	      Py_DECREF (jacobianCallback_);
+	      jacobianCallback_ = 0;
+	    }
 	}
 
 	virtual void impl_compute (result_t& result, const argument_t& argument)
@@ -136,10 +143,57 @@ namespace roboptim
 
 	virtual void impl_gradient (gradient_t& gradient,
 				    const argument_t& argument,
-				    size_type /*functionId*/)
+				    size_type functionId)
 	  const throw ()
 	{
-	  gradient = argument;
+	  if (!gradientCallback_)
+	    {
+	      PyErr_SetString
+		(PyExc_TypeError,
+		 "gradient callback not set");
+	      return;
+	    }
+	  if (!PyFunction_Check (gradientCallback_))
+	    {
+	      PyErr_SetString
+		(PyExc_TypeError,
+		 "gradient callback is not a function");
+	      return;
+	    }
+
+	  npy_intp inputSize = static_cast<npy_intp>
+	    (::roboptim::core::python::Function::inputSize ());
+
+	  PyObject* gradientNumpy =
+	    PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, &gradient[0]);
+	  if (!gradientNumpy)
+	    {
+	      PyErr_SetString (PyExc_TypeError, "cannot convert result");
+	      return;
+	    }
+
+	  PyObject* argNumpy =
+	    PyArray_SimpleNewFromData
+	    (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	  if (!argNumpy)
+	    {
+	      PyErr_SetString (PyExc_TypeError, "cannot convert argument");
+	      return;
+	    }
+
+	  PyObject* arglist =
+	    Py_BuildValue ("(OOi)", gradientNumpy, argNumpy, functionId);
+	  if (!arglist)
+	    {
+	      Py_DECREF (arglist);
+	      PyErr_SetString
+		(PyExc_TypeError, "failed to build argument list");
+	      return;
+	    }
+
+	  PyObject* resultPy = PyEval_CallObject (gradientCallback_, arglist);
+	  Py_DECREF (arglist);
+	  Py_XDECREF(resultPy);
 	}
 
 
@@ -156,19 +210,88 @@ namespace roboptim
 	  gradientCallback_ = callback;
 	}
 
+	void
+	setJacobianCallback (PyObject* callback)
+	{
+	  if (jacobianCallback_)
+	    {
+	      Py_DECREF (jacobianCallback_);
+	      jacobianCallback_ = 0;
+	    }
+
+	  Py_XINCREF (callback);
+	  jacobianCallback_ = callback;
+	}
+
       private:
 	PyObject* gradientCallback_;
 	PyObject* jacobianCallback_;
       };
+
+      class TwiceDifferentiableFunction
+	: virtual public ::roboptim::TwiceDifferentiableFunction,
+	  public ::roboptim::core::python::DifferentiableFunction
+      {
+      public:
+	explicit TwiceDifferentiableFunction (size_type inputSize,
+					      size_type outputSize,
+					      const std::string& name)
+	  : ::roboptim::TwiceDifferentiableFunction (inputSize, outputSize, name),
+	    ::roboptim::DifferentiableFunction
+	    (inputSize, outputSize, name),
+	    ::roboptim::core::python::DifferentiableFunction
+	    (inputSize, outputSize, name),
+	    hessianCallback_ (0)
+	{
+	}
+
+	virtual ~TwiceDifferentiableFunction () throw ()
+	{
+	  if (hessianCallback_)
+	    {
+	      Py_DECREF (hessianCallback_);
+	      hessianCallback_ = 0;
+	    }
+	}
+
+	virtual void impl_compute (result_t& result, const argument_t& argument)
+	  const throw ()
+	{
+	  ::roboptim::core::python::Function::impl_compute (result, argument);
+	}
+
+	virtual void impl_gradient
+	(gradient_t& gradient, const argument_t& argument, size_type functionId)
+	  const throw ()
+	{
+	  ::roboptim::core::python::DifferentiableFunction::impl_gradient
+	    (gradient, argument, functionId);
+	}
+
+	virtual void
+	impl_hessian (hessian_t& hessian,
+		      const argument_t& argument,
+		      size_type functionId) const throw ()
+	{
+	  //FIXME: implement this.
+	}
+
+      private:
+	PyObject* hessianCallback_;
+      };
+
     } // end of namespace python.
   } // end of namespace core.
 } // end of namespace roboptim.
 
 using roboptim::core::python::Function;
 using roboptim::core::python::DifferentiableFunction;
+using roboptim::core::python::TwiceDifferentiableFunction;
 
 static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
   "roboptim_core_function";
+static const char* ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME =
+  "roboptim_core_problem";
 
 namespace detail
 {
@@ -223,6 +346,36 @@ createFunction (PyObject*, PyObject* args)
 }
 
 static PyObject*
+createProblem (PyObject*, PyObject* args)
+{
+  typedef roboptim::Problem< ::roboptim::DifferentiableFunction,
+    boost::mpl::vector< ::roboptim::LinearFunction,
+			::roboptim::DifferentiableFunction> >
+    problem_t;
+  Function* costFunction = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &costFunction))
+    return 0;
+
+  DifferentiableFunction* dfunction =
+    dynamic_cast<DifferentiableFunction*> (costFunction);
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a differentiable function object");
+      return 0;
+    }
+
+  problem_t* problem = new problem_t (*dfunction);
+  PyObject* problemPy =
+    PyCapsule_New (problem, ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME,
+		   &detail::destructor<problem_t>);
+
+  return problemPy;
+}
+
+
+static PyObject*
 compute (PyObject*, PyObject* args)
 {
   Function* function = 0;
@@ -230,7 +383,7 @@ compute (PyObject*, PyObject* args)
   PyObject* result = 0;
   if (!PyArg_ParseTuple
       (args, "O&OO",
-       detail::functionConverter, &function, &x, &result))
+       detail::functionConverter, &function, &result, &x))
     return 0;
   if (!function)
     {
@@ -272,6 +425,69 @@ compute (PyObject*, PyObject* args)
   Py_INCREF(Py_None);
   return Py_None;
 }
+
+static PyObject*
+gradient (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  PyObject* x = 0;
+  PyObject* gradient = 0;
+  Function::size_type functionId = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&OOi",
+       detail::functionConverter, &function, &gradient, &x, &functionId))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+
+  DifferentiableFunction* dfunction =
+    dynamic_cast<DifferentiableFunction*> (function);
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a differentiable function object");
+      return 0;
+    }
+
+  PyObject* gradientNumpy =
+    PyArray_FROM_OTF(gradient, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
+
+  // Try to build an array type from x.
+  // All types providing a sequence interface are compatible.
+  // Tuples, sequences and Numpy types for instance.
+  PyObject* xNumpy =
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+  if (!xNumpy)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Argument cannot be converted to Numpy object");
+      return 0;
+    }
+
+  // Directly map Eigen vector over Numpy x.
+  Eigen::Map<Function::argument_t> xEigen
+    (static_cast<double*> (PyArray_DATA (xNumpy)), function->inputSize ());
+
+  // Directly map Eigen result to the numpy array data.
+  Eigen::Map<Function::result_t> gradientEigen
+    (static_cast<double*>
+     (PyArray_DATA (gradientNumpy)), dfunction->gradientSize ());
+
+  gradientEigen = dfunction->gradient (xEigen, functionId);
+  if (PyErr_Occurred ())
+    return 0;
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
 
 static PyObject*
 bindCompute (PyObject*, PyObject* args)
@@ -329,7 +545,7 @@ bindGradient (PyObject*, PyObject* args)
 
   DifferentiableFunction* dfunction
     = dynamic_cast<DifferentiableFunction*> (function);
-  std::cout << "foo" << dfunction << std::endl;
+
   if (!dfunction)
     {
       PyErr_SetString
@@ -361,8 +577,14 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Create a Function object."},
     {"DifferentiableFunction",  createFunction<DifferentiableFunction>,
      METH_VARARGS, "Create a DifferentiableFunction object."},
+    {"TwiceDifferentiableFunction", createFunction<TwiceDifferentiableFunction>,
+     METH_VARARGS, "Create a TwiceDifferentiableFunction object."},
+    {"Problem",  createProblem, METH_VARARGS,
+     "Create a Problem object."},
     {"compute",  compute, METH_VARARGS,
      "Evaluate a function."},
+    {"gradient",  gradient, METH_VARARGS,
+     "Evaluate a function gradient."},
     {"bindCompute",  bindCompute, METH_VARARGS,
      "Bind a Python function to function computation."},
     {"bindGradient",  bindGradient, METH_VARARGS,

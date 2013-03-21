@@ -23,20 +23,20 @@ class TestFunction(unittest.TestCase):
         x = [42.,]
         result = numpy.array([0.,])
 
-        roboptim.core.compute (f, x, result)
+        roboptim.core.compute (f, result, x)
 
         self.assertEqual (x, [42.,])
         self.assertEqual (result, [84.,])
 
         # Check computation with tuples.
         x = (0.,)
-        roboptim.core.compute (f, x, result)
+        roboptim.core.compute (f, result, x)
         self.assertEqual (x, (0.,))
         self.assertEqual (result, [0.,])
 
         # Check computation with arrays.
         x = numpy.array([-10.,])
-        roboptim.core.compute (f, x, result)
+        roboptim.core.compute (f, result, x)
         self.assertEqual (x[0], -10.)
         self.assertEqual (result, [-20.,])
 
@@ -47,7 +47,7 @@ class TestFunction(unittest.TestCase):
         x = [15.,]
         result = numpy.array([0.,])
 
-        roboptim.core.compute (f, x, result)
+        roboptim.core.compute (f, result, x)
 
         self.assertEqual (x, [15.,])
         self.assertEqual (result, [30.,])
@@ -64,7 +64,7 @@ class TestFunction(unittest.TestCase):
         # We cannot call compute before setting a callback
         x = [42.,]
         result = numpy.array([0.,])
-        self.assertRaises(TypeError, roboptim.core.compute, (f, x, result))
+        self.assertRaises(TypeError, roboptim.core.compute, (f, result, x))
 
         # Check that error are throw properly when callback has a bad
         # prototype.
@@ -72,20 +72,26 @@ class TestFunction(unittest.TestCase):
 
         x = [42.,]
         result = numpy.array([0.,])
-        self.assertRaises(TypeError, roboptim.core.compute, (f, x, result))
+        self.assertRaises(TypeError, roboptim.core.compute, (f, result, x))
 
         roboptim.core.bindCompute(f, badcallback2)
-        self.assertRaises(TypeError, roboptim.core.compute, (f, x, result))
+        self.assertRaises(TypeError, roboptim.core.compute, (f, result, x))
 
     def test_gradient(self):
         def compute(result, x):
             result[0] = x[0] * x[0]
-        def gradient(result, x):
+        def gradient(result, x, functionId):
             result[0] = 2
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)
-        #roboptim.core.bindGradient(f, gradient)
+        roboptim.core.bindGradient(f, gradient)
+
+        x = [15.,]
+        gradient = numpy.array([0.,])
+        roboptim.core.gradient (f, gradient, x, 0)
+        self.assertEqual (gradient, [2.,])
+
 
 
 if __name__ == '__main__':
