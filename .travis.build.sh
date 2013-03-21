@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 # Directories.
 root_dir=`pwd`
@@ -10,12 +11,15 @@ core_dir="$build_dir/roboptim-core"
 git_clone="git clone --quiet --recursive --depth 1"
 
 # Create layout.
-rm -rf "$build_dir"
+rm -rf "$build_dir" "$install_dir"
 mkdir -p "$build_dir"
+mkdir -p "$install_dir"
 
 # Setup environment variables.
 export PKG_CONFIG_PATH="$install_dir/lib/pkgconfig:$PKG_CONFIG_PATH"
-echo $PKG_CONFIG_PATH
+
+pythonsite_dir=`python -c "import sys, os; print os.sep.join(['lib', 'python' + sys.version[:3], 'site-packages'])"`
+export PYTHON_PATH="$install_dir/$pythonsite_dir:$PYTHON_PATH"
 
 # Checkout roboptim-core
 echo "Installing dependencies..."
