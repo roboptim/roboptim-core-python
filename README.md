@@ -1,5 +1,7 @@
-roboptim-core-py
-================
+roboptim-core-python
+====================
+
+[![Build Status](https://travis-ci.org/roboptim/roboptim-core-python.png?branch=master)](https://travis-ci.org/roboptim/roboptim-core-python)
 
 This package provides Python bindings for roboptim-core. It relies on
 Numpy arrays to provide vectors and matrices which are easy to use.
