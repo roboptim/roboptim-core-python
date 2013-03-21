@@ -62,5 +62,12 @@ class TestFunctionPy(unittest.TestCase):
         except:
             print ("ipopt solver not available, passing...")
 
+        solver = roboptim.core.PySolver ("ipopt", problem)
+        print (solver)
+        solver.solve ()
+        r = solver.minimum ()
+        print (r)
+
+
 if __name__ == '__main__':
     unittest.main()

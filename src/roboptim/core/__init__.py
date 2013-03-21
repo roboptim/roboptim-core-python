@@ -92,4 +92,36 @@ class PySolver(object):
 
     def solve (self):
         solve (self._solver)
-        return None #FIXME:
+
+    def minimum (self):
+        (objType, obj) = minimum (self._solver)
+        if objType == "roboptim_core_result":
+            return PyResult (obj)
+        elif objType == "roboptim_core_result_with_warnings":
+            return PyResultWithWarnings (obj)
+        elif objType == "roboptim_core_solver_error":
+            return PySolverError (obj)
+        else:
+            raise TypeError ("unhandled case")
+
+class PyResult(object):
+    def __init__(self, _result):
+        self._result = _result
+
+    def __str__ (self):
+        return strResult (self._result)
+
+class PyResultWithWarnings(PyResult):
+    def __init__(self, _result):
+        self._result = _result
+
+    def __str__ (self):
+        return strResultWithWarnings (self._result)
+
+
+class PySolverError(object):
+    def __init__(self, _error):
+        self._error = _error
+
+    def __str__ (self):
+        return strSolverError (self._error)

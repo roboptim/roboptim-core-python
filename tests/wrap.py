@@ -132,6 +132,9 @@ class TestFunction(unittest.TestCase):
             solver = roboptim.core.Solver ("ipopt", problem)
             self.assertTrue(roboptim.core.strSolver (solver))
             roboptim.core.solve (solver)
+
+            result = roboptim.core.minimum (solver)
+            print (result)
         except:
             print ("ipopt solver not available, passing...")
 

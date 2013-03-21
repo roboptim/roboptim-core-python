@@ -299,6 +299,12 @@ static const char* ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME =
   "roboptim_core_problem";
 static const char* ROBOPTIM_CORE_SOLVER_CAPSULE_NAME =
   "roboptim_core_solver";
+static const char* ROBOPTIM_CORE_RESULT_CAPSULE_NAME =
+  "roboptim_core_result";
+static const char* ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME =
+  "roboptim_core_result_with_warnings";
+static const char* ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME =
+  "roboptim_core_solver_error";
 
 typedef roboptim::Problem<
   ::roboptim::DifferentiableFunction,
@@ -313,6 +319,10 @@ typedef roboptim::Solver<
 			  solver_t;
 
 typedef roboptim::SolverFactory<solver_t> factory_t;
+
+typedef roboptim::Result result_t;
+typedef roboptim::ResultWithWarnings resultWithWarnings_t;
+typedef roboptim::SolverError solverError_t;
 
 namespace detail
 {
@@ -336,6 +346,39 @@ namespace detail
     factory_t* ptr = static_cast<factory_t*>
       (PyCapsule_GetPointer
        (obj, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
+  void destructor<result_t> (PyObject* obj)
+  {
+    result_t* ptr = static_cast<result_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_RESULT_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
+  void destructor<resultWithWarnings_t> (PyObject* obj)
+  {
+    resultWithWarnings_t* ptr = static_cast<resultWithWarnings_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
+  void destructor<solverError_t> (PyObject* obj)
+  {
+    solverError_t* ptr = static_cast<solverError_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME));
     assert (ptr && "failed to retrieve pointer from capsule");
     if (ptr)
       delete ptr;
@@ -400,6 +443,60 @@ namespace detail
 	PyErr_SetString
 	  (PyExc_TypeError,
 	   "Problem object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  resultConverter (PyObject* obj, result_t** address)
+  {
+    assert (address);
+    result_t* ptr = static_cast<result_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_RESULT_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "Result object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  resultWithWarningsConverter (PyObject* obj, resultWithWarnings_t** address)
+  {
+    assert (address);
+    resultWithWarnings_t* ptr = static_cast<resultWithWarnings_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "ResultWithWarnings object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  solverErrorConverter (PyObject* obj, solverError_t** address)
+  {
+    assert (address);
+    solverError_t* ptr = static_cast<solverError_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "SolverError object expected but another type was passed");
 	return 0;
       }
     *address = ptr;
@@ -739,6 +836,62 @@ solve (PyObject*, PyObject* args)
   return Py_None;
 }
 
+static PyObject*
+minimum (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::factoryConverter, &factory))
+    return 0;
+
+  solver_t::result_t result = (*factory) ().minimum ();
+
+  npy_intp inputSize = static_cast<npy_intp>
+    ((*factory) ().problem ().function ().inputSize ());
+
+ switch (result.which ())
+   {
+     // should never happen
+   case solver_t::SOLVER_NO_SOLUTION:
+     {
+       PyErr_SetString (PyExc_TypeError, "problem not yet solved");
+       return 0;
+     }
+   case solver_t::SOLVER_VALUE:
+     {
+       result_t* result_ = new result_t (boost::get<result_t> (result));
+       PyObject* resultPy =
+	 PyCapsule_New (result_, ROBOPTIM_CORE_RESULT_CAPSULE_NAME,
+			&detail::destructor<result_t>);
+       return Py_BuildValue
+	 ("(s,O)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
+     }
+   case solver_t::SOLVER_VALUE_WARNINGS:
+     {
+       resultWithWarnings_t* warn =
+	 new resultWithWarnings_t (boost::get<resultWithWarnings_t> (result));
+       PyObject* warnPy =
+	 PyCapsule_New (warn, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME,
+			&detail::destructor<resultWithWarnings_t>);
+       return Py_BuildValue
+	 ("(s,O)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
+     }
+   case solver_t::SOLVER_ERROR:
+     {
+       solverError_t* err = new solverError_t
+	 (boost::get<solverError_t> (result));
+       PyObject* errPy =
+	 PyCapsule_New (err, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME,
+			&detail::destructor<solverError_t>);
+       return Py_BuildValue
+	 ("(s,O)", ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME, errPy);
+     }
+   }
+ Py_INCREF (Py_None);
+ return Py_None;
+}
+
+
 template <typename T>
 PyObject*
 print (PyObject*, PyObject* args);
@@ -779,6 +932,66 @@ print<factory_t> (PyObject*, PyObject* args)
 
   std::stringstream ss;
   ss << (*obj) ();
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <>
+PyObject*
+print<result_t> (PyObject*, PyObject* args)
+{
+  result_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::resultConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << (*obj);
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <>
+PyObject*
+print<resultWithWarnings_t> (PyObject*, PyObject* args)
+{
+  resultWithWarnings_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::resultWithWarningsConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << (*obj);
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <>
+PyObject*
+print<solverError_t> (PyObject*, PyObject* args)
+{
+  solverError_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::solverErrorConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << (*obj);
 
   return Py_BuildValue ("s", ss.str ().c_str ());
 }
@@ -832,12 +1045,20 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Bind a Python function to gradient computation."},
     {"solve",  solve, METH_VARARGS,
      "Solve the optimization problem."},
+    {"minimum",  minimum, METH_VARARGS,
+     "Retrieve the optimization result."},
     {"strFunction",  print<Function>, METH_VARARGS,
      "Print a function as a Python string."},
     {"strProblem",  print<problem_t>, METH_VARARGS,
      "Print a problem as a Python string."},
     {"strSolver",  print<factory_t>, METH_VARARGS,
      "Print a solver as a Python string."},
+    {"strResult",  print<result_t>, METH_VARARGS,
+     "Print a result as a Python string."},
+    {"strResultWithWarnings",  print<resultWithWarnings_t>, METH_VARARGS,
+     "Print a result as a Python string."},
+    {"strSolverError",  print<solverError_t>, METH_VARARGS,
+     "Print a solver error as a Python string."},
     {0, 0, 0, 0}
   };
 
