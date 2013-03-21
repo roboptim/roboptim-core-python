@@ -41,16 +41,16 @@ class TestFunction(unittest.TestCase):
         self.assertEqual (result, [-20.,])
 
         # Check with differentiable function
-        #f = roboptim.core.DifferentiableFunction (1, 1, "test function")
-        #roboptim.core.bindCompute(f, compute)
+        f = roboptim.core.DifferentiableFunction (1, 1, "test function")
+        roboptim.core.bindCompute(f, compute)
 
-        #x = [15.,]
-        #result = numpy.array([0.,])
+        x = [15.,]
+        result = numpy.array([0.,])
 
-        #roboptim.core.compute (f, x, result)
+        roboptim.core.compute (f, x, result)
 
-        #self.assertEqual (x, [15.,])
-        #self.assertEqual (result, [30.,])
+        self.assertEqual (x, [15.,])
+        self.assertEqual (result, [30.,])
 
     def test_badcompute(self):
         def badcallback():

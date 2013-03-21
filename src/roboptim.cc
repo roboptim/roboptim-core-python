@@ -105,7 +105,7 @@ namespace roboptim
       };
 
       class DifferentiableFunction
-	: public ::roboptim::DifferentiableFunction,
+	: virtual public ::roboptim::DifferentiableFunction,
 	  public ::roboptim::core::python::Function
       {
       public:
