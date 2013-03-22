@@ -57,6 +57,9 @@ class TestFunctionPy(unittest.TestCase):
         problem.startingPoint = numpy.array([0.,])
         self.assertEqual (problem.startingPoint, [0.])
 
+        problem.argumentBounds = numpy.array([[-3.,4.],])
+        numpy.allclose (problem.argumentBounds, [[-3.,4.],])
+
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)

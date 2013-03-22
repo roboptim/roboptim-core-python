@@ -891,6 +891,89 @@ setStartingPoint (PyObject*, PyObject* args)
 }
 
 static PyObject*
+getArgumentBounds (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  if (!PyArg_ParseTuple (args, "O&", &detail::problemConverter, &problem))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+
+  npy_intp sdims[2] =
+    {
+      static_cast<npy_intp> (problem->function ().inputSize ()),
+      2
+    };
+
+  PyObject* bounds = PyArray_SimpleNew (2, sdims, NPY_DOUBLE);
+
+  for (unsigned i = 0; i < problem->function ().inputSize (); ++i)
+    {
+      *static_cast<double*> (PyArray_GETPTR2 (bounds, i, 0)) =
+	problem->argumentBounds ()[i].first;
+      *static_cast<double*> (PyArray_GETPTR2 (bounds, i, 1)) =
+	problem->argumentBounds ()[i].second;
+    }
+
+  return bounds;
+}
+
+static PyObject*
+setArgumentBounds (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  PyObject* bounds = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O", &detail::problemConverter, &problem, &bounds))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+  PyObject* boundsNumpy =
+    PyArray_FROM_OTF
+    (bounds, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+  if (!boundsNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError,
+		       "failed to build numpy array from 2st argument");
+      return 0;
+    }
+
+  if (PyArray_DIM (bounds, 0) != problem->function ().inputSize ())
+    {
+      PyErr_SetString (PyExc_TypeError, "invalid size");
+      return 0;
+    }
+
+  if (PyArray_DIM (bounds, 1) != 2)
+    {
+      PyErr_SetString (PyExc_TypeError, "invalid size");
+      return 0;
+    }
+
+  Eigen::Map<Function::argument_t> boundsEigen
+    (static_cast<double*> (PyArray_DATA (boundsNumpy)),
+     problem->function ().inputSize ());
+
+  for (unsigned i = 0; i < problem->function ().inputSize (); ++i)
+    {
+      problem->argumentBounds ()[i].first =
+	*static_cast<double*> (PyArray_GETPTR2 (bounds, i, 0));
+      problem->argumentBounds ()[i].second =
+	*static_cast<double*> (PyArray_GETPTR2 (bounds, i, 1));
+    }
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+
+static PyObject*
 addConstraint (PyObject*, PyObject* args)
 {
   problem_t* problem = 0;
@@ -1160,6 +1243,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the problem starting point."},
     {"setStartingPoint", setStartingPoint, METH_VARARGS,
      "Set the problem starting point."},
+    {"getArgumentBounds", getArgumentBounds, METH_VARARGS,
+     "Get the problem argument bounds."},
+    {"setArgumentBounds", setArgumentBounds, METH_VARARGS,
+     "Set the problem argument bounds."},
     {"addConstraint", addConstraint, METH_VARARGS,
      "Add a constraint to the problem."},
 

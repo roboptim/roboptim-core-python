@@ -88,6 +88,14 @@ class PyProblem(object):
     def startingPoint(self, value):
         setStartingPoint (self._problem, value)
 
+    @property
+    def argumentBounds(self):
+        return getArgumentBounds (self._problem)
+
+    @argumentBounds.setter
+    def argumentBounds(self, value):
+        setArgumentBounds (self._problem, value)
+
     def addConstraint (self):
         pass #FIXME:
 
