@@ -4,7 +4,7 @@ from __future__ import \
 
 import unittest
 import roboptim.core
-import numpy
+import numpy, numpy.testing
 
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
@@ -58,7 +58,7 @@ class TestFunctionPy(unittest.TestCase):
         self.assertEqual (problem.startingPoint, [0.])
 
         problem.argumentBounds = numpy.array([[-3.,4.],])
-        numpy.allclose (problem.argumentBounds, [[-3.,4.],])
+        numpy.testing.assert_almost_equal (problem.argumentBounds, [[-3.,4.],])
 
         # Let the test fail if the solver does not exist.
         try:
