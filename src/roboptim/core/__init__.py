@@ -96,6 +96,14 @@ class PyProblem(object):
     def argumentBounds(self, value):
         setArgumentBounds (self._problem, value)
 
+    @property
+    def argumentScales(self):
+        return getArgumentScales (self._problem)
+
+    @argumentScales.setter
+    def argumentScales(self, value):
+        setArgumentScales (self._problem, value)
+
     def addConstraint (self):
         pass #FIXME:
 

@@ -60,6 +60,9 @@ class TestFunctionPy(unittest.TestCase):
         problem.argumentBounds = numpy.array([[-3.,4.],])
         numpy.testing.assert_almost_equal (problem.argumentBounds, [[-3.,4.],])
 
+        problem.argumentScales = numpy.array([2.,])
+        numpy.testing.assert_almost_equal (problem.argumentScales, [2.,])
+
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)

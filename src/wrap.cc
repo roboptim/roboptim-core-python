@@ -972,6 +972,72 @@ setArgumentBounds (PyObject*, PyObject* args)
   return Py_None;
 }
 
+static PyObject*
+getArgumentScales (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  if (!PyArg_ParseTuple (args, "O&", &detail::problemConverter, &problem))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+
+  npy_intp inputSize =
+    static_cast<npy_intp> (problem->function ().inputSize ());
+  PyObject* scalesNumpy = PyArray_SimpleNew (1, &inputSize, NPY_DOUBLE);
+
+  Eigen::Map<Function::vector_t> scalesEigen
+    (static_cast<double*> (PyArray_DATA (scalesNumpy)),
+     problem->function ().inputSize ());
+
+  for (Function::size_type i = 0; i < inputSize; ++i)
+    scalesEigen[i] = problem->argumentScales ()[i];
+  return scalesNumpy;
+}
+
+static PyObject*
+setArgumentScales (PyObject*, PyObject* args)
+{
+  problem_t* problem = 0;
+  PyObject* scales = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O", &detail::problemConverter, &problem, &scales))
+    return 0;
+  if (!problem)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
+      return 0;
+    }
+  PyObject* scalesNumpy =
+    PyArray_FROM_OTF
+    (scales, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+  if (!scalesNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError,
+		       "failed to build numpy array from 2st argument");
+      return 0;
+    }
+
+  if (PyArray_DIM (scalesNumpy, 0) != problem->function ().inputSize ())
+    {
+      PyErr_SetString (PyExc_TypeError, "invalid size");
+      return 0;
+    }
+
+  Eigen::Map<Function::argument_t> scalesEigen
+    (static_cast<double*> (PyArray_DATA (scalesNumpy)),
+     problem->function ().inputSize ());
+
+  for (Function::size_type i = 0; i < problem->function ().inputSize (); ++i)
+    problem->argumentScales ()[i] = scalesEigen[i];
+
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 
 static PyObject*
 addConstraint (PyObject*, PyObject* args)
@@ -1247,6 +1313,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the problem argument bounds."},
     {"setArgumentBounds", setArgumentBounds, METH_VARARGS,
      "Set the problem argument bounds."},
+    {"getArgumentScales", getArgumentScales, METH_VARARGS,
+     "Get the problem scales."},
+    {"setArgumentScales", setArgumentScales, METH_VARARGS,
+     "Set the problem scales."},
     {"addConstraint", addConstraint, METH_VARARGS,
      "Add a constraint to the problem."},
 
