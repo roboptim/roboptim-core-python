@@ -12,6 +12,15 @@
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
 
+#define FORWARD_TYPEDEFS(X)				  \
+  typedef X parent_t;					  \
+  typedef typename parent_t::result_t result_t;		  \
+  typedef typename parent_t::size_type size_type;	  \
+  typedef typename parent_t::argument_t argument_t;	  \
+  typedef typename parent_t::gradient_t gradient_t;	  \
+  typedef typename parent_t::jacobian_t jacobian_t
+
+
 namespace roboptim
 {
   namespace core
@@ -116,6 +125,8 @@ namespace roboptim
 	  public ::roboptim::core::python::Function
       {
       public:
+	FORWARD_TYPEDEFS (::roboptim::DifferentiableFunction);
+
 	explicit DifferentiableFunction (size_type inputSize,
 					 size_type outputSize,
 					 const std::string& name)
@@ -238,6 +249,8 @@ namespace roboptim
 	  public ::roboptim::core::python::DifferentiableFunction
       {
       public:
+	FORWARD_TYPEDEFS (::roboptim::TwiceDifferentiableFunction);
+
 	explicit TwiceDifferentiableFunction (size_type inputSize,
 					      size_type outputSize,
 					      const std::string& name)
