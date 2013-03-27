@@ -23,6 +23,18 @@ export PKG_CONFIG_PATH="$install_dir/lib/pkgconfig:$PKG_CONFIG_PATH"
 pythonsite_dir=`python -c "import sys, os; print os.sep.join(['lib', 'python' + sys.version[:3], 'site-packages'])"`
 export PYTHONPATH="$install_dir/$pythonsite_dir:$PYTHON_PATH"
 
+# Checkout Eigen.
+cd "$build_dir"
+wget "http://bitbucket.org/eigen/eigen/get/3.1.2.tar.gz"
+tar xzvf 3.1.2.tar.gz
+cd "$build_dir/eigen-eigen-5097c01bcdc4/"
+mkdir -p "$build_dir/eigen-eigen-5097c01bcdc4/_build"
+cd "$build_dir/eigen-eigen-5097c01bcdc4/_build"
+cmake .. -DCMAKE_INSTALL_PREFIX:STRING="$install_dir" \
+          -Dpkg_config_libdir:STRING="$install_dir/lib"
+make
+make install
+
 # Checkout roboptim-core
 echo "Installing dependencies..."
 cd "$build_dir"
