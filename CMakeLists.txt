@@ -36,7 +36,8 @@ SETUP_PROJECT()
 SEARCH_FOR_BOOST()
 ADD_REQUIRED_DEPENDENCY("roboptim-core >= 0.5")
 
-# Look for Python.
+# Look for Python 2.7
+SET(Python_ADDITIONAL_VERSIONS 2.7)
 FINDPYTHON()
 
 # Detect numpy.
