@@ -3,6 +3,7 @@ roboptim-core-python
 
 [![Build Status](https://travis-ci.org/roboptim/roboptim-core-python.png?branch=master)](https://travis-ci.org/roboptim/roboptim-core-python)
 [![Coverage Status](https://coveralls.io/repos/roboptim/roboptim-core-python/badge.png)](https://coveralls.io/r/roboptim/roboptim-core-python)
+[![Landscape](https://landscape.io/github/roboptim/roboptim-core-python/master/landscape.png)](https://landscape.io/github/roboptim/roboptim-core-python/master)
 
 This package provides Python bindings for roboptim-core. It relies on
 Numpy arrays to provide vectors and matrices which are easy to use.
