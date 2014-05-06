@@ -44,7 +44,6 @@ class TestFunctionPy(unittest.TestCase):
         print (f (x))
         print (f)
 
-
     def test_differentiable_function(self):
         cost = Square()
         problem = roboptim.core.PyProblem (cost)
@@ -66,6 +65,7 @@ class TestFunctionPy(unittest.TestCase):
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)
+            print (solver)
             solver.solve ()
             r = solver.minimum ()
             print (r)

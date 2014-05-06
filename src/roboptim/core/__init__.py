@@ -11,7 +11,7 @@ class PyFunction(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__ (self, inSize, outSize, name):
-        self._function = Function (inSize, outSize, name)
+        self._function = Function (inSize, outSize, name.encode('utf-8'))
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
 
@@ -48,7 +48,8 @@ class PyDifferentiableFunction(PyFunction):
     __metaclass__ = abc.ABCMeta
 
     def __init__ (self, inSize, outSize, name):
-        self._function = DifferentiableFunction (inSize, outSize, name)
+        self._function = DifferentiableFunction (inSize, outSize,
+                                                 name.encode('utf-8'))
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
         gradientCb = lambda result, x, fid: self.impl_gradient (result, x, fid)

@@ -6,10 +6,11 @@ python:
   - "2.7"
 env:
   global:
-  - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev python python-dev python-numpy"
-  - GIT_DEPENDENCIES="roboptim/roboptim-core"
+  - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev coinor-libipopt-dev libblas-dev liblapack-dev libmumps-seq-dev gfortran python python-dev python-numpy"
+  - GIT_DEPENDENCIES="roboptim/roboptim-core roboptim/roboptim-core-plugin-ipopt"
   - GH_USERNAME=thomas-moulard
   - GH_REPO=roboptim/roboptim-core-python
+  - LCOV_IGNORE_RULES="*tests*"
   - secure: "Slm+HqRT+Vy0SG7E9gEShuHvNz6XWRUmBhVBLVJEaYy/0Lo2qp4OjFEWDjiJwFIiXstW2Wclds4SuewAn3Tc4x7dsY+5uaMCX7S/HPzsBCjLXUwjKasUqEGaVTIYmtFJm57hOkz6K2SLUUV4intkMiwtCiq/R0xe92QTTKkHyfo="
 notifications:
   email:
