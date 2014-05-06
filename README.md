@@ -18,7 +18,7 @@ can be defined and solved directly from Python.
 The goal is to match as closely as possible the C++ API while relying
 on the dynamic nature of Python to ease problem writing.
 
-See tests/function.py for examples.
+See [tests/function.py](tests/function.py) for examples.
 
 For general information about the project, please refer to its
 homepage: http://www.roboptim.net/
