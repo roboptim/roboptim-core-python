@@ -76,7 +76,7 @@ class TestFunction(unittest.TestCase):
         result = numpy.array([0.,])
         self.assertRaises(TypeError, roboptim.core.compute, (f, result, x))
 
-        # Check that error are throw properly when callback has a bad
+        # Check that errors are thrown properly when callback has a bad
         # prototype.
         roboptim.core.bindCompute(f, badcallback)
 

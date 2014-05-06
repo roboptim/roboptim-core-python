@@ -38,7 +38,7 @@ namespace roboptim
 	{
 	}
 
-	virtual ~Function () throw ()
+	virtual ~Function ()
 	{
 	  if (computeCallback_)
 	    {
@@ -49,7 +49,7 @@ namespace roboptim
 
 	virtual void
 	impl_compute (result_t& result, const argument_t& argument)
-	  const throw ()
+	  const
 	{
 	  if (!computeCallback_)
 	    {
@@ -137,7 +137,7 @@ namespace roboptim
 	{
 	}
 
-	virtual ~DifferentiableFunction () throw ()
+	virtual ~DifferentiableFunction ()
 	{
 	  if (gradientCallback_)
 	    {
@@ -152,7 +152,7 @@ namespace roboptim
 	}
 
 	virtual void impl_compute (result_t& result, const argument_t& argument)
-	  const throw ()
+	  const
 	{
 	  ::roboptim::core::python::Function::impl_compute (result, argument);
 	}
@@ -160,7 +160,7 @@ namespace roboptim
 	virtual void impl_gradient (gradient_t& gradient,
 				    const argument_t& argument,
 				    size_type functionId)
-	  const throw ()
+	  const
 	{
 	  if (!gradientCallback_)
 	    {
@@ -263,7 +263,7 @@ namespace roboptim
 	{
 	}
 
-	virtual ~TwiceDifferentiableFunction () throw ()
+	virtual ~TwiceDifferentiableFunction ()
 	{
 	  if (hessianCallback_)
 	    {
@@ -273,14 +273,14 @@ namespace roboptim
 	}
 
 	virtual void impl_compute (result_t& result, const argument_t& argument)
-	  const throw ()
+	  const
 	{
 	  ::roboptim::core::python::Function::impl_compute (result, argument);
 	}
 
 	virtual void impl_gradient
 	(gradient_t& gradient, const argument_t& argument, size_type functionId)
-	  const throw ()
+	  const
 	{
 	  ::roboptim::core::python::DifferentiableFunction::impl_gradient
 	    (gradient, argument, functionId);
@@ -289,7 +289,7 @@ namespace roboptim
 	virtual void
 	impl_hessian (hessian_t& hessian,
 		      const argument_t& argument,
-		      size_type functionId) const throw ()
+		      size_type functionId) const
 	{
 	  //FIXME: implement this.
 	}
