@@ -145,9 +145,34 @@ class PySolver(object):
 class PyResult(object):
     def __init__(self, _result):
         self._result = _result
+        self._dict = resultToDict (_result)
 
     def __str__ (self):
         return strResult (self._result)
+
+    @property
+    def inputSize(self):
+        return int(self._dict["inputSize"])
+
+    @property
+    def outputSize(self):
+        return int(self._dict["outputSize"])
+
+    @property
+    def x(self):
+        return self._dict["x"]
+
+    @property
+    def value(self):
+        return self._dict["value"]
+
+    @property
+    def constraints(self):
+        return self._dict["constraints"]
+
+    @property
+    def lagrange(self):
+        return self._dict["lambda"]
 
 
 class PyResultWithWarnings(PyResult):

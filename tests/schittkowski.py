@@ -43,9 +43,8 @@ class TestFunctionPy(unittest.TestCase):
             solver.solve ()
             r = solver.minimum ()
             print (r)
-            # TODO: assert result:
-            # expected result = [1., 1.]
-            # expected value = 0.
+            numpy.testing.assert_almost_equal (r.value, [0.])
+            numpy.testing.assert_almost_equal (r.x, [1., 1.])
         except:
             print ("ipopt solver not available, passing...")
 

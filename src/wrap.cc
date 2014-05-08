@@ -1323,6 +1323,81 @@ setParameters (PyObject*, PyObject* args)
 
 template <typename T>
 PyObject*
+toDict (PyObject*, PyObject* args);
+
+template <>
+PyObject*
+toDict<result_t> (PyObject*, PyObject* args)
+{
+  result_t* result = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::resultConverter, &result))
+    return 0;
+
+  if (!result)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a result.");
+      return 0;
+    }
+
+  // In C++, parameters are: std::map<std::string, Parameter>
+  PyObject* dict_result = PyDict_New ();
+
+  PyDict_SetItemString (dict_result, "inputSize",
+                        PyInt_FromLong (result->inputSize));
+  PyDict_SetItemString (dict_result, "outputSize",
+                        PyInt_FromLong (result->outputSize));
+
+
+  npy_intp npy_size = static_cast<npy_intp> (result->x.size ());
+  PyObject* xNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result->x.data ());
+  if (!xNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.x");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "x", xNumpy);
+
+  npy_size = static_cast<npy_intp> (result->value.size ());
+  PyObject* valueNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result->value.data ());
+  if (!valueNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.value");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "value", valueNumpy);
+
+  npy_size = static_cast<npy_intp> (result->constraints.size ());
+  PyObject* constraintsNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result->constraints.data ());
+  if (!constraintsNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.constraints");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "constraints", constraintsNumpy);
+
+  npy_size = static_cast<npy_intp> (result->lambda.size ());
+  PyObject* lambdaNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result->lambda.data ());
+  if (!lambdaNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.lambda");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "lambda", lambdaNumpy);
+
+  return Py_BuildValue ("O", dict_result);
+}
+
+template <typename T>
+PyObject*
 print (PyObject*, PyObject* args);
 
 template <>
@@ -1497,6 +1572,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the solver parameters."},
     {"setParameters", setParameters, METH_VARARGS,
      "Set the solver parameters."},
+
+    // Result functions
+    {"resultToDict", toDict<result_t>, METH_VARARGS,
+     "Convert a Result object to a Python dictionary."},
 
     // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,
