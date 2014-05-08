@@ -3,6 +3,9 @@
 #include <numpy/arrayobject.h>
 #include <numpy/ndarraytypes.h>
 
+#include <boost/variant/static_visitor.hpp>
+#include <boost/variant/apply_visitor.hpp>
+
 #include <roboptim/core/differentiable-function.hh>
 #include <roboptim/core/function.hh>
 #include <roboptim/core/io.hh>
@@ -12,12 +15,12 @@
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
 
-#define FORWARD_TYPEDEFS(X)				  \
-  typedef X parent_t;					  \
-  typedef typename parent_t::result_t result_t;		  \
-  typedef typename parent_t::size_type size_type;	  \
-  typedef typename parent_t::argument_t argument_t;	  \
-  typedef typename parent_t::gradient_t gradient_t;	  \
+#define FORWARD_TYPEDEFS(X)				\
+  typedef X parent_t;					\
+  typedef typename parent_t::result_t result_t;		\
+  typedef typename parent_t::size_type size_type;	\
+  typedef typename parent_t::argument_t argument_t;	\
+  typedef typename parent_t::gradient_t gradient_t;	\
   typedef typename parent_t::jacobian_t jacobian_t
 
 
@@ -336,6 +339,8 @@ typedef roboptim::SolverFactory<solver_t> factory_t;
 typedef roboptim::Result result_t;
 typedef roboptim::ResultWithWarnings resultWithWarnings_t;
 typedef roboptim::SolverError solverError_t;
+typedef roboptim::Parameter parameter_t;
+typedef solver_t::parameters_t parameters_t;
 
 namespace detail
 {
@@ -514,6 +519,56 @@ namespace detail
       }
     *address = ptr;
     return 1;
+  }
+
+  struct ParameterValueVisitor : public boost::static_visitor<PyObject*>
+  {
+    PyObject* operator () (const roboptim::Function::value_type& p) const
+    {
+      return PyFloat_FromDouble (p);
+    }
+
+    PyObject* operator () (const int& p) const
+    {
+      return PyInt_FromLong (p);
+    }
+
+    PyObject* operator () (const std::string& p) const
+    {
+      return PyString_FromString (p.c_str ());
+    }
+  };
+
+  parameter_t::parameterValues_t toParameterValue (PyObject* obj)
+  {
+    // Value can be: double, int, or std::string
+
+    // String
+    if (PyString_Check (obj))
+      {
+	return PyString_AsString (obj);
+      }
+    // Unicode string
+    else if (PyUnicode_Check (obj))
+      {
+	return PyString_AsString (PyUnicode_AsASCIIString (obj));
+      }
+    // Integer
+    else if (PyInt_Check (obj))
+      {
+        return static_cast<int> (PyInt_AsLong (obj));
+      }
+    // Double
+    else if (PyFloat_Check (obj))
+      {
+        return PyFloat_AsDouble (obj);
+      }
+
+    PyErr_SetString
+      (PyExc_TypeError,
+       "invalid parameter value (should be double, int or string).");
+
+    return 0;
   }
 } // end of namespace detail.
 
@@ -1123,48 +1178,148 @@ minimum (PyObject*, PyObject* args)
   npy_intp inputSize = static_cast<npy_intp>
     ((*factory) ().problem ().function ().inputSize ());
 
- switch (result.which ())
-   {
-     // should never happen
-   case solver_t::SOLVER_NO_SOLUTION:
-     {
-       PyErr_SetString (PyExc_TypeError, "problem not yet solved");
-       return 0;
-     }
-   case solver_t::SOLVER_VALUE:
-     {
-       result_t* result_ = new result_t (boost::get<result_t> (result));
-       PyObject* resultPy =
-	 PyCapsule_New (result_, ROBOPTIM_CORE_RESULT_CAPSULE_NAME,
-			&detail::destructor<result_t>);
-       return Py_BuildValue
-	 ("(s,O)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
-     }
-   case solver_t::SOLVER_VALUE_WARNINGS:
-     {
-       resultWithWarnings_t* warn =
-	 new resultWithWarnings_t (boost::get<resultWithWarnings_t> (result));
-       PyObject* warnPy =
-	 PyCapsule_New (warn, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME,
-			&detail::destructor<resultWithWarnings_t>);
-       return Py_BuildValue
-	 ("(s,O)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
-     }
-   case solver_t::SOLVER_ERROR:
-     {
-       solverError_t* err = new solverError_t
-	 (boost::get<solverError_t> (result));
-       PyObject* errPy =
-	 PyCapsule_New (err, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME,
-			&detail::destructor<solverError_t>);
-       return Py_BuildValue
-	 ("(s,O)", ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME, errPy);
-     }
-   }
- Py_INCREF (Py_None);
- return Py_None;
+  switch (result.which ())
+    {
+      // should never happen
+    case solver_t::SOLVER_NO_SOLUTION:
+      {
+	PyErr_SetString (PyExc_TypeError, "problem not yet solved");
+	return 0;
+      }
+    case solver_t::SOLVER_VALUE:
+      {
+	result_t* result_ = new result_t (boost::get<result_t> (result));
+	PyObject* resultPy =
+	  PyCapsule_New (result_, ROBOPTIM_CORE_RESULT_CAPSULE_NAME,
+			 &detail::destructor<result_t>);
+	return Py_BuildValue
+	  ("(s,O)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
+      }
+    case solver_t::SOLVER_VALUE_WARNINGS:
+      {
+	resultWithWarnings_t* warn =
+	  new resultWithWarnings_t (boost::get<resultWithWarnings_t> (result));
+	PyObject* warnPy =
+	  PyCapsule_New (warn, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME,
+			 &detail::destructor<resultWithWarnings_t>);
+	return Py_BuildValue
+	  ("(s,O)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
+      }
+    case solver_t::SOLVER_ERROR:
+      {
+	solverError_t* err = new solverError_t
+	  (boost::get<solverError_t> (result));
+	PyObject* errPy =
+	  PyCapsule_New (err, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME,
+			 &detail::destructor<solverError_t>);
+	return Py_BuildValue
+	  ("(s,O)", ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME, errPy);
+      }
+    }
+  Py_INCREF (Py_None);
+  return Py_None;
 }
 
+static PyObject*
+getParameter (const parameter_t& parameter)
+{
+  PyObject* description = PyString_FromString (parameter.description.c_str ());
+  PyObject* value = boost::apply_visitor (detail::ParameterValueVisitor (),
+                                          parameter.value);
+
+  return PyTuple_Pack (2, description, value);
+}
+
+static PyObject*
+getParameters (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::factoryConverter, &factory))
+    return 0;
+
+  if (!factory)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver.");
+      return 0;
+    }
+
+  solver_t& solver = (*factory) ();
+
+  // In C++, parameters are: std::map<std::string, Parameter>
+  PyObject* parameters = PyDict_New ();
+
+  for (parameters_t::const_iterator iter = solver.parameters ().begin ();
+       iter != solver.parameters ().end (); iter++)
+    {
+      // Insert object to Python dictionary
+      PyDict_SetItemString (parameters, (iter->first).c_str (),
+                            getParameter (iter->second));
+    }
+
+  return Py_BuildValue ("O", parameters);
+}
+
+static PyObject*
+setParameters (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  PyObject* py_parameters = 0;
+
+  if (!PyArg_ParseTuple (args, "O&O",
+			 &detail::factoryConverter, &factory, &py_parameters))
+    return 0;
+
+  if (!factory)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver.");
+      return 0;
+    }
+
+  if (!PyDict_Check (py_parameters))
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be a dictionary.");
+      return 0;
+    }
+
+  solver_t& solver = (*factory) ();
+
+  // In C++, parameters are: std::map<std::string, Parameter>
+  parameters_t& parameters = solver.parameters ();
+  parameters.clear ();
+
+  PyObject *key, *value;
+  Py_ssize_t pos = 0;
+  parameter_t parameter;
+
+  // Iterate over dictionary
+  while (PyDict_Next (py_parameters, &pos, &key, &value))
+    {
+      std::string str_key = "";
+
+      if (PyBytes_Check (key))
+	{
+	  str_key = PyBytes_AsString (key);
+	}
+      else if (PyUnicode_Check (key))
+	{
+	  str_key = PyBytes_AsString (PyUnicode_AsASCIIString (key));
+	}
+      else
+	{
+	  continue;
+	}
+      if (!PyTuple_Check (value))
+        continue;
+
+      parameter.description = PyBytes_AsString (PyTuple_GetItem (value, 0));
+      parameter.value = detail::toParameterValue (PyTuple_GetItem (value, 1));
+      parameters[str_key] = parameter;
+    }
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
 
 template <typename T>
 PyObject*
@@ -1333,10 +1488,17 @@ static PyMethodDef RobOptimCoreMethods[] =
     {"addConstraint", addConstraint, METH_VARARGS,
      "Add a constraint to the problem."},
 
+    // Solver functions
     {"solve",  solve, METH_VARARGS,
      "Solve the optimization problem."},
     {"minimum",  minimum, METH_VARARGS,
      "Retrieve the optimization result."},
+    {"getParameters", getParameters, METH_VARARGS,
+     "Get the solver parameters."},
+    {"setParameters", setParameters, METH_VARARGS,
+     "Set the solver parameters."},
+
+    // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,
      "Print a function as a Python string."},
     {"strProblem",  print<problem_t>, METH_VARARGS,

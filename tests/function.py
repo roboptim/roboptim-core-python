@@ -66,9 +66,16 @@ class TestFunctionPy(unittest.TestCase):
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)
             print (solver)
+
             solver.solve ()
             r = solver.minimum ()
             print (r)
+
+            # Add a new dummy parameter
+            parameters = solver.parameters
+            parameters["dummy"] = tuple(("dummy description", "dummy value"))
+            solver.parameters = parameters
+            print (solver)
         except:
             print ("ipopt solver not available, passing...")
 

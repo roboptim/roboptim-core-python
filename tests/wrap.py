@@ -102,6 +102,8 @@ class TestFunction(unittest.TestCase):
         roboptim.core.gradient (f, gradient, x, 0)
         self.assertEqual (gradient, [2.,])
 
+
+class TestProblem(unittest.TestCase):
     def test_problem(self):
         def compute(result, x):
             result[0] = x[0] * x[0]
@@ -115,6 +117,8 @@ class TestFunction(unittest.TestCase):
         problem = roboptim.core.Problem (f)
         self.assertTrue(roboptim.core.strProblem (problem))
 
+
+class TestSolver(unittest.TestCase):
     def test_solver(self):
         def compute(result, x):
             result[0] = x[0] * x[0]

@@ -7,6 +7,7 @@ import numpy
 
 from .wrap import *
 
+
 class PyFunction(object):
     __metaclass__ = abc.ABCMeta
 
@@ -17,8 +18,10 @@ class PyFunction(object):
 
     def inputSize (self):
         return inputSize (self._function)
+
     def outputSize (self):
         return outputSize (self._function)
+
     def name (self):
         return getName (self._function)
 
@@ -73,6 +76,7 @@ class PyDifferentiableFunction(PyFunction):
                 return True
         return NotImplemented
 
+
 class PyProblem(object):
     def __init__(self, cost):
         self.cost = cost
@@ -108,6 +112,7 @@ class PyProblem(object):
     def addConstraint (self):
         pass #FIXME:
 
+
 class PySolver(object):
     def __init__(self, solverName, problem):
         self._solver = Solver (solverName, problem._problem)
@@ -129,12 +134,21 @@ class PySolver(object):
         else:
             raise TypeError ("unhandled case")
 
+    @property
+    def parameters(self):
+        return getParameters (self._solver)
+
+    @parameters.setter
+    def parameters(self, value):
+        setParameters (self._solver, value)
+
 class PyResult(object):
     def __init__(self, _result):
         self._result = _result
 
     def __str__ (self):
         return strResult (self._result)
+
 
 class PyResultWithWarnings(PyResult):
     def __init__(self, _result):
