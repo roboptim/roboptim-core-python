@@ -9,7 +9,7 @@ import numpy, numpy.testing
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
         roboptim.core.PyDifferentiableFunction.__init__ \
-            (self, 1, 1, "test")
+            (self, 1, 1, "differentiable function test")
 
     def impl_compute (self, result, x):
         result[0] = x[0] * x[0]
@@ -22,7 +22,7 @@ class TestFunctionPy(unittest.TestCase):
     def test_function(self):
         class F(roboptim.core.PyFunction):
             def __init__ (self):
-                roboptim.core.PyFunction.__init__ (self, 1, 1, "test")
+                roboptim.core.PyFunction.__init__ (self, 1, 1, "function test")
 
             def impl_compute (self, result, x):
                 result[0] = 42.
