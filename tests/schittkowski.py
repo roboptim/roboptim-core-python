@@ -6,6 +6,7 @@ from __future__ import \
 import unittest
 import roboptim.core
 import numpy, numpy.testing
+import math
 
 
 class Problem1_Cost (roboptim.core.PyDifferentiableFunction):
@@ -45,8 +46,37 @@ class TestFunctionPy(unittest.TestCase):
             print (r)
             numpy.testing.assert_almost_equal (r.value, [0.])
             numpy.testing.assert_almost_equal (r.x, [1., 1.])
-        except:
-            print ("ipopt solver not available, passing...")
+        except Exception, e:
+            print ("Error: " + str(e))
+
+    def test_problem_2(self):
+        """
+        Schittkowski problem #2
+        """
+        cost = Problem1_Cost ()
+        problem = roboptim.core.PyProblem (cost)
+        problem.startingPoint = numpy.array([-2., 1., ])
+        problem.argumentBounds = numpy.array([[float("-inf"), float("inf")],
+                                              [1.5, float("inf")], ])
+
+        # Check starting value
+        self.assertEqual (cost (problem.startingPoint), 909)
+
+        # Let the test fail if the solver does not exist.
+        try:
+            solver = roboptim.core.PySolver ("ipopt", problem)
+            print (solver)
+            solver.solve ()
+            r = solver.minimum ()
+            print (r)
+            a = math.pow (598./1200., 0.5)
+            b = 400 * a**3
+            final_x = [2.*a*math.cos (1./3. * math.acos (1./b)), 1.5]
+            numpy.testing.assert_almost_equal (r.value, [0.0504261879])
+            numpy.testing.assert_almost_equal (r.x, final_x)
+        except Exception, e:
+            print ("Error: " + str(e))
+
 
 if __name__ == '__main__':
     unittest.main ()

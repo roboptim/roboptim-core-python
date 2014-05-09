@@ -191,6 +191,16 @@ class PyResultWithWarnings(PyResult):
 class PySolverError(object):
     def __init__(self, _error):
         self._error = _error
+        self._dict = solverErrorToDict (_error)
 
     def __str__ (self):
         return strSolverError (self._error)
+
+    @property
+    def error(self):
+        return self._dict["error"]
+
+    @property
+    def lastState(self):
+        if self._dict["lastState"]:
+            return self._dict["lastState"]

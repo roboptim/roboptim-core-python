@@ -1345,6 +1345,71 @@ setParameters (PyObject*, PyObject* args)
 
 template <typename T>
 PyObject*
+toDict (T& obj);
+
+template <>
+PyObject*
+toDict<result_t> (result_t& result)
+{
+  // In C++, parameters are: std::map<std::string, Parameter>
+  PyObject* dict_result = PyDict_New ();
+
+  PyDict_SetItemString (dict_result, "inputSize",
+                        PyInt_FromLong (result.inputSize));
+  PyDict_SetItemString (dict_result, "outputSize",
+                        PyInt_FromLong (result.outputSize));
+
+
+  npy_intp npy_size = static_cast<npy_intp> (result.x.size ());
+  PyObject* xNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result.x.data ());
+  if (!xNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.x");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "x", xNumpy);
+
+  npy_size = static_cast<npy_intp> (result.value.size ());
+  PyObject* valueNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result.value.data ());
+  if (!valueNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.value");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "value", valueNumpy);
+
+  npy_size = static_cast<npy_intp> (result.constraints.size ());
+  PyObject* constraintsNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result.constraints.data ());
+  if (!constraintsNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.constraints");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "constraints", constraintsNumpy);
+
+  npy_size = static_cast<npy_intp> (result.lambda.size ());
+  PyObject* lambdaNumpy =
+    PyArray_SimpleNewFromData (1, &npy_size,
+			       NPY_DOUBLE, result.lambda.data ());
+  if (!lambdaNumpy)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert result.lambda");
+      return 0;
+    }
+  PyDict_SetItemString (dict_result, "lambda", lambdaNumpy);
+
+  return Py_BuildValue ("O", dict_result);
+}
+
+
+template <typename T>
+PyObject*
 toDict (PyObject*, PyObject* args);
 
 template <>
@@ -1363,60 +1428,7 @@ toDict<result_t> (PyObject*, PyObject* args)
       return 0;
     }
 
-  // In C++, parameters are: std::map<std::string, Parameter>
-  PyObject* dict_result = PyDict_New ();
-
-  PyDict_SetItemString (dict_result, "inputSize",
-                        PyInt_FromLong (result->inputSize));
-  PyDict_SetItemString (dict_result, "outputSize",
-                        PyInt_FromLong (result->outputSize));
-
-
-  npy_intp npy_size = static_cast<npy_intp> (result->x.size ());
-  PyObject* xNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result->x.data ());
-  if (!xNumpy)
-    {
-      PyErr_SetString (PyExc_TypeError, "cannot convert result.x");
-      return 0;
-    }
-  PyDict_SetItemString (dict_result, "x", xNumpy);
-
-  npy_size = static_cast<npy_intp> (result->value.size ());
-  PyObject* valueNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result->value.data ());
-  if (!valueNumpy)
-    {
-      PyErr_SetString (PyExc_TypeError, "cannot convert result.value");
-      return 0;
-    }
-  PyDict_SetItemString (dict_result, "value", valueNumpy);
-
-  npy_size = static_cast<npy_intp> (result->constraints.size ());
-  PyObject* constraintsNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result->constraints.data ());
-  if (!constraintsNumpy)
-    {
-      PyErr_SetString (PyExc_TypeError, "cannot convert result.constraints");
-      return 0;
-    }
-  PyDict_SetItemString (dict_result, "constraints", constraintsNumpy);
-
-  npy_size = static_cast<npy_intp> (result->lambda.size ());
-  PyObject* lambdaNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result->lambda.data ());
-  if (!lambdaNumpy)
-    {
-      PyErr_SetString (PyExc_TypeError, "cannot convert result.lambda");
-      return 0;
-    }
-  PyDict_SetItemString (dict_result, "lambda", lambdaNumpy);
-
-  return Py_BuildValue ("O", dict_result);
+  return toDict<result_t> (*result);
 }
 
 template <>
@@ -1455,6 +1467,37 @@ toDict<resultWithWarnings_t> (PyObject* obj, PyObject* args)
   PyDict_SetItemString (dict_result, "warnings", warnings);
 
   return Py_BuildValue ("O", dict_result);
+}
+
+template <>
+PyObject*
+toDict<solverError_t> (PyObject* obj, PyObject* args)
+{
+  solverError_t* error = 0;
+
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::solverErrorConverter, &error))
+    return 0;
+
+  if (!error)
+    {
+      PyErr_SetString (PyExc_TypeError,
+                       "1st argument must be a solver error.");
+      return 0;
+    }
+
+  PyObject* dict_error = PyDict_New ();
+
+  PyDict_SetItemString (dict_error, "error",
+                        PyString_FromString (error->what ()));
+
+  if (error->lastState ())
+    {
+      PyObject* lastState = toDict<result_t> (*(error->lastState ()));
+      PyDict_SetItemString (dict_error, "lastState", lastState);
+    }
+
+  return Py_BuildValue ("O", dict_error);
 }
 
 
