@@ -178,9 +178,14 @@ class PyResult(object):
 class PyResultWithWarnings(PyResult):
     def __init__(self, _result):
         self._result = _result
+        self._dict = resultWithWarningsToDict (_result)
 
     def __str__ (self):
         return strResultWithWarnings (self._result)
+
+    @property
+    def warnings(self):
+        return self._dict["warnings"]
 
 
 class PySolverError(object):

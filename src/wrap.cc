@@ -471,9 +471,28 @@ namespace detail
   resultConverter (PyObject* obj, result_t** address)
   {
     assert (address);
-    result_t* ptr = static_cast<result_t*>
-      (PyCapsule_GetPointer
-       (obj, ROBOPTIM_CORE_RESULT_CAPSULE_NAME));
+
+    const char* capsule_name = PyCapsule_GetName (obj);
+
+    result_t* ptr = 0;
+
+    if (std::strcmp (capsule_name,
+                     ROBOPTIM_CORE_RESULT_CAPSULE_NAME) == 0)
+      {
+	ptr = static_cast<result_t*>
+	  (PyCapsule_GetPointer
+	   (obj, ROBOPTIM_CORE_RESULT_CAPSULE_NAME));
+      }
+    // Try upcasting
+    // TODO: find a better way to handle that
+    else if (std::strcmp (capsule_name,
+                          ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME) == 0)
+      {
+	ptr = static_cast<result_t*>
+	  (PyCapsule_GetPointer
+	   (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
+      }
+
     if (!ptr)
       {
 	PyErr_SetString
@@ -481,6 +500,7 @@ namespace detail
 	   "Result object expected but another type was passed");
 	return 0;
       }
+
     *address = ptr;
     return 1;
   }
@@ -489,9 +509,11 @@ namespace detail
   resultWithWarningsConverter (PyObject* obj, resultWithWarnings_t** address)
   {
     assert (address);
+
     resultWithWarnings_t* ptr = static_cast<resultWithWarnings_t*>
       (PyCapsule_GetPointer
        (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
+
     if (!ptr)
       {
 	PyErr_SetString
@@ -1330,6 +1352,7 @@ PyObject*
 toDict<result_t> (PyObject*, PyObject* args)
 {
   result_t* result = 0;
+
   if (!PyArg_ParseTuple (args, "O&",
 			 &detail::resultConverter, &result))
     return 0;
@@ -1395,6 +1418,45 @@ toDict<result_t> (PyObject*, PyObject* args)
 
   return Py_BuildValue ("O", dict_result);
 }
+
+template <>
+PyObject*
+toDict<resultWithWarnings_t> (PyObject* obj, PyObject* args)
+{
+  PyObject* dict_result = toDict<result_t> (obj, args);
+
+  if (!dict_result)
+    {
+      PyErr_SetString (PyExc_TypeError,
+                       "1st argument must be inherited from result.");
+      return 0;
+    }
+
+  resultWithWarnings_t* result = 0;
+
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::resultWithWarningsConverter, &result))
+    return 0;
+
+  if (!result)
+    {
+      PyErr_SetString (PyExc_TypeError,
+                       "1st argument must be a result with warnings.");
+      return 0;
+    }
+
+  // Warnings stored as a list
+  PyObject* warnings = PyList_New (result->warnings.size ());
+  for (size_t i = 0; i < result->warnings.size (); ++i)
+    {
+      PyList_SetItem (warnings, i,
+                      PyString_FromString (result->warnings[i].what ()));
+    }
+  PyDict_SetItemString (dict_result, "warnings", warnings);
+
+  return Py_BuildValue ("O", dict_result);
+}
+
 
 template <typename T>
 PyObject*
@@ -1576,6 +1638,8 @@ static PyMethodDef RobOptimCoreMethods[] =
     // Result functions
     {"resultToDict", toDict<result_t>, METH_VARARGS,
      "Convert a Result object to a Python dictionary."},
+    {"resultWithWarningsToDict", toDict<resultWithWarnings_t>, METH_VARARGS,
+     "Convert a ResultWithWarnings object to a Python dictionary."},
 
     // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,
