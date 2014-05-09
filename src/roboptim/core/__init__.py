@@ -109,8 +109,8 @@ class PyProblem(object):
     def argumentScales(self, value):
         setArgumentScales (self._problem, value)
 
-    def addConstraint (self):
-        pass #FIXME:
+    def addConstraint (self, constraint, bounds):
+        addConstraint (self._problem, constraint._function, bounds)
 
 
 class PySolver(object):

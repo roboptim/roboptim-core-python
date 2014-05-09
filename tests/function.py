@@ -62,6 +62,9 @@ class TestFunctionPy(unittest.TestCase):
         problem.argumentScales = numpy.array([2.,])
         numpy.testing.assert_almost_equal (problem.argumentScales, [2.,])
 
+        g1 = Square ()
+        problem.addConstraint (g1, [-1., 10.,])
+
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.PySolver ("ipopt", problem)

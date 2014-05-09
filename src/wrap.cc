@@ -154,6 +154,16 @@ namespace roboptim
 	    }
 	}
 
+	size_type inputSize () const
+	{
+	  return ::roboptim::DifferentiableFunction::inputSize ();
+	}
+
+	size_type outputSize () const
+	{
+	  return ::roboptim::DifferentiableFunction::outputSize ();
+	}
+
 	virtual void impl_compute (result_t& result, const argument_t& argument)
 	  const
 	{
@@ -417,9 +427,17 @@ namespace detail
   functionConverter (PyObject* obj, Function** address)
   {
     assert (address);
+
+    if (!PyCapsule_CheckExact (obj))
+      {
+	PyErr_SetString (PyExc_TypeError, "Invalid Python Function given.");
+	return 0;
+      }
+
     Function* ptr = static_cast<Function*>
       (PyCapsule_GetPointer
        (obj, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME));
+
     if (!ptr)
       {
 	PyErr_SetString
@@ -427,7 +445,9 @@ namespace detail
 	   "Function object expected but another type was passed");
 	return 0;
       }
+
     *address = ptr;
+
     return 1;
   }
 
@@ -592,6 +612,14 @@ namespace detail
 
     return 0;
   }
+
+  // See: http://www.boost.org/doc/libs/1_55_0/libs/smart_ptr/sp_techniques.html#static
+  struct null_deleter
+  {
+    void operator () (void const *) const
+    {
+    }
+  };
 } // end of namespace detail.
 
 template <typename T>
@@ -650,8 +678,10 @@ static PyObject*
 getName (PyObject*, PyObject* args)
 {
   Function* function = 0;
+
   if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
     return 0;
+
   if (!function)
     {
       PyErr_SetString
@@ -659,6 +689,7 @@ getName (PyObject*, PyObject* args)
 	 "argument 1 should be a function object");
       return 0;
     }
+
   return Py_BuildValue("s", function->getName ().c_str ());
 }
 
@@ -671,6 +702,7 @@ createProblem (PyObject*, PyObject* args)
 
   DifferentiableFunction* dfunction =
     dynamic_cast<DifferentiableFunction*> (costFunction);
+
   if (!dfunction)
     {
       PyErr_SetString
@@ -1143,11 +1175,13 @@ addConstraint (PyObject*, PyObject* args)
        &detail::functionConverter, &function,
        &min, &max))
     return 0;
+
   if (!problem)
     {
       PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
       return 0;
     }
+
   if (!function)
     {
       PyErr_SetString (PyExc_TypeError, "2nd argument must be a function");
@@ -1164,10 +1198,11 @@ addConstraint (PyObject*, PyObject* args)
       return 0;
     }
 
-  //FIXME: this will make everything segv.
-  //contraint will be freed when problem disappear...
-  // boost::shared_ptr<DifferentiableFunction> constraint (dfunction);
-  // problem->addConstraint (constraint, Function::makeInterval (min, max));
+  // If we just used a boost::shared_ptr, the constraint would be freed when the
+  // problem disappears, so we use a null deleter to prevent that.
+  boost::shared_ptr<DifferentiableFunction> constraint (dfunction,
+                                                        detail::null_deleter ());
+  problem->addConstraint (constraint, Function::makeInterval (min, max));
 
   Py_INCREF (Py_None);
   return Py_None;
@@ -1471,7 +1506,7 @@ toDict<resultWithWarnings_t> (PyObject* obj, PyObject* args)
 
 template <>
 PyObject*
-toDict<solverError_t> (PyObject* obj, PyObject* args)
+toDict<solverError_t> (PyObject*, PyObject* args)
 {
   solverError_t* error = 0;
 
@@ -1683,6 +1718,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Convert a Result object to a Python dictionary."},
     {"resultWithWarningsToDict", toDict<resultWithWarnings_t>, METH_VARARGS,
      "Convert a ResultWithWarnings object to a Python dictionary."},
+    {"solverErrorToDict", toDict<solverError_t>, METH_VARARGS,
+     "Convert a SolverError object to a Python dictionary."},
 
     // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,

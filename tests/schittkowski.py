@@ -22,6 +22,32 @@ class Problem1_Cost (roboptim.core.PyDifferentiableFunction):
         result[1] = 200. * (x[1] - x[0]**2)
 
 
+class Problem6_Cost (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 2, 1, "(1 - x₀)²")
+
+    def impl_compute (self, result, x):
+        result[0] = (1 - x[0])**2
+
+    def impl_gradient (self, result, x, functionId):
+        result[0] = -2. * (1 - x[0])
+        result[1] = 0.
+
+
+class Problem6_G1 (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 2, 1, "10 (x₁ - x₀²)")
+
+    def impl_compute (self, result, x):
+        result[0] = 10. * (x[1] - x[0]**2)
+
+    def impl_gradient (self, result, x, functionId):
+        result[0] = -20. * x[0]
+        result[1] = 10.
+
+
 class TestFunctionPy(unittest.TestCase):
 
     def test_problem_1(self):
@@ -77,6 +103,33 @@ class TestFunctionPy(unittest.TestCase):
         except Exception, e:
             print ("Error: " + str(e))
 
+    def test_problem_6(self):
+        """
+        Schittkowski problem #6
+        """
+        cost = Problem6_Cost ()
+        problem = roboptim.core.PyProblem (cost)
+        problem.startingPoint = numpy.array([-1.2, 1., ])
+        problem.argumentBounds = numpy.array([[float("-inf"), float("inf")],
+                                              [float("-inf"), float("inf")], ])
+
+        g1 = Problem6_G1 ()
+        problem.addConstraint (g1, [0., 0.,])
+
+        # Check starting value
+        numpy.testing.assert_almost_equal (cost (problem.startingPoint)[0], 4.84)
+
+        # Let the test fail if the solver does not exist.
+        try:
+            solver = roboptim.core.PySolver ("ipopt", problem)
+            print (solver)
+            solver.solve ()
+            r = solver.minimum ()
+            print (r)
+            numpy.testing.assert_almost_equal (r.value, [0.])
+            numpy.testing.assert_almost_equal (r.x, [1., 1.])
+        except Exception, e:
+            print ("Error: " + str(e))
 
 if __name__ == '__main__':
     unittest.main ()
