@@ -72,7 +72,7 @@ class TestFunctionPy(unittest.TestCase):
             print (r)
             numpy.testing.assert_almost_equal (r.value, [0.])
             numpy.testing.assert_almost_equal (r.x, [1., 1.])
-        except Exception, e:
+        except Exception as e:
             print ("Error: " + str(e))
 
     def test_problem_2(self):
@@ -100,7 +100,7 @@ class TestFunctionPy(unittest.TestCase):
             final_x = [2.*a*math.cos (1./3. * math.acos (1./b)), 1.5]
             numpy.testing.assert_almost_equal (r.value, [0.0504261879])
             numpy.testing.assert_almost_equal (r.x, final_x)
-        except Exception, e:
+        except Exception as e:
             print ("Error: " + str(e))
 
     def test_problem_6(self):
@@ -128,7 +128,7 @@ class TestFunctionPy(unittest.TestCase):
             print (r)
             numpy.testing.assert_almost_equal (r.value, [0.])
             numpy.testing.assert_almost_equal (r.x, [1., 1.])
-        except Exception, e:
+        except Exception as e:
             print ("Error: " + str(e))
 
 if __name__ == '__main__':

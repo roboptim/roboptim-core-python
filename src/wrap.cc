@@ -15,6 +15,16 @@
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
 
+// Python 3 support
+#if PY_MAJOR_VERSION >= 3
+# define PyInt_FromLong      PyLong_FromLong
+# define PyInt_AsLong        PyLong_AsLong
+# define PyInt_Check         PyLong_Check
+# define PyString_FromString PyBytes_FromString
+# define PyString_Check      PyBytes_Check
+# define PyString_AsString   PyBytes_AsString
+#endif //! PY_MAJOR_VERSION
+
 #define FORWARD_TYPEDEFS(X)				\
   typedef X parent_t;					\
   typedef typename parent_t::result_t result_t;		\
@@ -593,7 +603,7 @@ namespace detail
     // Unicode string
     else if (PyUnicode_Check (obj))
       {
-	return PyString_AsString (PyUnicode_AsASCIIString (obj));
+	return PyString_AsString (PyUnicode_AsUTF8String (obj));
       }
     // Integer
     else if (PyInt_Check (obj))
@@ -630,7 +640,7 @@ createFunction (PyObject*, PyObject* args)
   Function::size_type outSize = 0;
   const char* name = 0;
 
-  if (!PyArg_ParseTuple(args, "iiz", &inSize, &outSize, &name))
+  if (!PyArg_ParseTuple(args, "iis", &inSize, &outSize, &name))
     return 0;
 
   std::string name_ = (name) ? name : "";
@@ -1737,16 +1747,64 @@ static PyMethodDef RobOptimCoreMethods[] =
     {0, 0, 0, 0}
   };
 
+#if PY_MAJOR_VERSION >= 3
+static struct PyModuleDef moduledef =
+  {
+    PyModuleDef_HEAD_INIT,
+    "wrap",              /* m_name */
+    "RobOptim wrapper",  /* m_doc */
+    -1,                  /* m_size */
+    RobOptimCoreMethods, /* m_methods */
+    NULL,                /* m_reload */
+    NULL,                /* m_traverse */
+    NULL,                /* m_clear */
+    NULL,                /* m_free */
+  };
+#endif
+
+namespace {
+
+#if PY_MAJOR_VERSION >= 3
+  int
+#else
+  void
+#endif
+  init_numpy()
+  {
+    import_array ();
+  }
+
+  static PyObject *
+  moduleinit(void)
+  {
+    PyObject* m = 0;
+
+#if PY_MAJOR_VERSION >= 3
+    m = PyModule_Create (&moduledef);
+#else
+    m = Py_InitModule ("wrap", RobOptimCoreMethods);
+#endif //! PY_MAJOR_VERSION
+
+    // Initialize numpy.
+    init_numpy ();
+
+    if (m == 0)
+      return NULL;
+
+    return m;
+  }
+} // end of namespace
+
+#if PY_MAJOR_VERSION < 3
 PyMODINIT_FUNC
-initwrap ()
+initwrap(void)
 {
-  PyObject* m = 0;
-
-  m = Py_InitModule("wrap", RobOptimCoreMethods);
-
-  // Initialize numpy.
-  import_array ();
-
-  if (m == 0)
-    return;
+  moduleinit ();
 }
+#else
+PyMODINIT_FUNC
+PyInit_wrap(void)
+{
+  return moduleinit ();
+}
+#endif

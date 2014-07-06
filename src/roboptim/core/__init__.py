@@ -12,7 +12,8 @@ class PyFunction(object):
     __metaclass__ = abc.ABCMeta
 
     def __init__ (self, inSize, outSize, name):
-        self._function = Function (inSize, outSize, name.encode('utf-8'))
+        self._function = Function (inSize, outSize,
+                                   self._formatName(name))
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
 
@@ -24,6 +25,16 @@ class PyFunction(object):
 
     def name (self):
         return getName (self._function)
+
+    def _formatName(self,name):
+        """
+        This method is used to accept UTF-8 function names for both Python 2
+        and Python 3.
+        """
+        if not isinstance (name, (str)):
+            return name.encode ('utf-8')
+        else:
+            return name
 
     @abc.abstractmethod
     def impl_compute (self, result, x):
@@ -52,7 +63,7 @@ class PyDifferentiableFunction(PyFunction):
 
     def __init__ (self, inSize, outSize, name):
         self._function = DifferentiableFunction (inSize, outSize,
-                                                 name.encode('utf-8'))
+                                                 self._formatName(name))
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
         gradientCb = lambda result, x, fid: self.impl_gradient (result, x, fid)

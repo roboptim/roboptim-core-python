@@ -22,8 +22,8 @@ class TestFunction(unittest.TestCase):
         f = roboptim.core.Function (1, 1, "test function")
         roboptim.core.bindCompute(f, compute)
 
-        self.assertEquals (roboptim.core.strFunction (f),
-                           "test function (not differentiable)")
+        self.assertEqual (roboptim.core.strFunction (f),
+                          "test function (not differentiable)")
 
         # Check computation with sequences.
         x = [42.,]
@@ -51,8 +51,8 @@ class TestFunction(unittest.TestCase):
         roboptim.core.bindCompute(f, compute)
 
         #FIXME: why is it so?!
-        self.assertEquals (roboptim.core.strFunction (f),
-                           "test function (not differentiable)")
+        self.assertEqual (roboptim.core.strFunction (f),
+                          "test function (not differentiable)")
 
         x = [15.,]
         result = numpy.array([0.,])
