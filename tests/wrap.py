@@ -102,13 +102,34 @@ class TestFunction(unittest.TestCase):
         roboptim.core.gradient (f, gradient, x, 0)
         self.assertEqual (gradient, [2.,])
 
+    def test_finite_differences(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2 * x[0]
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        fd = roboptim.core.FiniteDifferenceGradient (f)
+
+        x = [42.,]
+        result = numpy.array([0.,])
+        result_fd = numpy.array([0.,])
+        roboptim.core.compute (fd, result_fd, x)
+        roboptim.core.compute (f, result, x)
+        numpy.testing.assert_almost_equal (result, result_fd)
+        roboptim.core.gradient (fd, result_fd, x, 0)
+        roboptim.core.bindGradient(f, gradient)
+        roboptim.core.gradient (f, result, x, 0)
+        numpy.testing.assert_almost_equal (result, result_fd, 5)
+
 
 class TestProblem(unittest.TestCase):
     def test_problem(self):
         def compute(result, x):
             result[0] = x[0] * x[0]
         def gradient(result, x, functionId):
-            result[0] = 2
+            result[0] = 2 * x[0]
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)
@@ -123,7 +144,7 @@ class TestSolver(unittest.TestCase):
         def compute(result, x):
             result[0] = x[0] * x[0]
         def gradient(result, x, functionId):
-            result[0] = 2
+            result[0] = 2 * x[0]
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)

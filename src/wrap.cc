@@ -14,6 +14,7 @@
 #include <roboptim/core/solver-factory.hh>
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
+#include <roboptim/core/finite-difference-gradient.hh>
 
 // Python 3 support
 #if PY_MAJOR_VERSION >= 3
@@ -127,6 +128,13 @@ namespace roboptim
 
 	  Py_XINCREF (callback);
 	  computeCallback_ = callback;
+	}
+
+	PyObject*
+	getComputeCallback () const
+	{
+	  Py_XINCREF (computeCallback_);
+	  return computeCallback_;
 	}
 
       private:
@@ -321,6 +329,40 @@ namespace roboptim
 	PyObject* hessianCallback_;
       };
 
+      class FiniteDifferenceGradient
+	: virtual public ::roboptim::GenericFiniteDifferenceGradient< ::roboptim::EigenMatrixDense,
+								      roboptim::finiteDifferenceGradientPolicies::Simple< ::roboptim::EigenMatrixDense> >,
+	  public ::roboptim::core::python::DifferentiableFunction
+      {
+      public:
+        typedef ::roboptim::GenericFiniteDifferenceGradient< ::roboptim::EigenMatrixDense,
+							     roboptim::finiteDifferenceGradientPolicies::Simple< ::roboptim::EigenMatrixDense> > 
+        fd_t;
+
+        typedef ::roboptim::core::python::Function inPyFunction_t;
+        typedef ::roboptim::core::python::DifferentiableFunction outPyFunction_t;
+
+        typedef ::roboptim::DifferentiableFunction outFunction_t;
+
+	FORWARD_TYPEDEFS (fd_t);
+
+
+	explicit FiniteDifferenceGradient (const inPyFunction_t& f)
+	  : fd_t (f),
+	    outFunction_t (f.inputSize (), f.outputSize (), f.getName ()),
+	    outPyFunction_t (f.inputSize (), f.outputSize (), f.getName ())
+	{
+	  setComputeCallback (f.getComputeCallback ());
+	}
+
+	virtual void impl_gradient (gradient_t& gradient,
+				    const argument_t& argument,
+				    size_type functionId)
+	  const
+	{
+	  fd_t::impl_gradient (gradient, argument, functionId);
+	}
+      };
     } // end of namespace python.
   } // end of namespace core.
 } // end of namespace roboptim.
@@ -328,6 +370,7 @@ namespace roboptim
 using roboptim::core::python::Function;
 using roboptim::core::python::DifferentiableFunction;
 using roboptim::core::python::TwiceDifferentiableFunction;
+using roboptim::core::python::FiniteDifferenceGradient;
 
 static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
   "roboptim_core_function";
@@ -650,6 +693,29 @@ createFunction (PyObject*, PyObject* args)
     PyCapsule_New (function, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
 		   &detail::destructor<T>);
   return functionPy;
+}
+
+template <typename T>
+static PyObject*
+createFunctionWrapper (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a function object");
+      return 0;
+    }
+
+  T* fdFunction = new T (*function);
+
+  PyObject* fdFunctionPy =
+    PyCapsule_New (fdFunction, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
+		   &detail::destructor<T>);
+  return fdFunctionPy;
 }
 
 static PyObject*
@@ -1730,6 +1796,11 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Convert a ResultWithWarnings object to a Python dictionary."},
     {"solverErrorToDict", toDict<solverError_t>, METH_VARARGS,
      "Convert a SolverError object to a Python dictionary."},
+
+    // Finite-differences functions
+    {"FiniteDifferenceGradient",
+     createFunctionWrapper<FiniteDifferenceGradient>,
+     METH_VARARGS, "Create a FiniteDifferenceGradient."},
 
     // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,

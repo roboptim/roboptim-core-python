@@ -36,6 +36,16 @@ class PyFunction(object):
         else:
             return name
 
+    def _decodeName(self, name):
+        """
+        This method is used to decode UTF-8 function names for both Python 2
+        and Python 3.
+        """
+        if not isinstance (name, (str)):
+            return name.decode ('utf-8')
+        else:
+            return name
+
     @abc.abstractmethod
     def impl_compute (self, result, x):
         return
@@ -70,7 +80,7 @@ class PyDifferentiableFunction(PyFunction):
         bindGradient (self._function, gradientCb)
 
     @abc.abstractmethod
-    def impl_gradient (self, result, x):
+    def impl_gradient (self, result, x, functionId):
         return
 
     def gradient (self, x, functionId):
@@ -86,6 +96,20 @@ class PyDifferentiableFunction(PyFunction):
             if any("impl_gradient" in B.__dict__ for B in C.__mro__):
                 return True
         return NotImplemented
+
+
+class PyFiniteDifference(PyDifferentiableFunction):
+    def __init__ (self, f):
+        PyDifferentiableFunction.__init__ \
+            (self, f.inputSize (), f.outputSize (), \
+             self._decodeName (f.name ()))
+        self._fd = FiniteDifferenceGradient (f._function)
+
+    def impl_compute (self, result, x):
+        compute (self._fd, result, x)
+
+    def impl_gradient (self, result, x, functionId):
+        gradient (self._fd, result, x, functionId)
 
 
 class PyProblem(object):
