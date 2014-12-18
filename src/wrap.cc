@@ -318,9 +318,9 @@ namespace roboptim
 	}
 
 	virtual void
-	impl_hessian (hessian_t& hessian,
-		      const argument_t& argument,
-		      size_type functionId) const
+	impl_hessian (hessian_t& /*hessian*/,
+		      const argument_t& /*argument*/,
+		      size_type /*functionId*/) const
 	{
 	  //FIXME: implement this.
 	}
@@ -1308,9 +1308,6 @@ minimum (PyObject*, PyObject* args)
 
   solver_t::result_t result = (*factory) ().minimum ();
 
-  npy_intp inputSize = static_cast<npy_intp>
-    ((*factory) ().problem ().function ().inputSize ());
-
   switch (result.which ())
     {
       // should never happen
@@ -1843,6 +1840,10 @@ namespace {
   init_numpy()
   {
     import_array ();
+
+#if PY_MAJOR_VERSION >= 3
+    return 0;
+#endif
   }
 
   static PyObject *
