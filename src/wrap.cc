@@ -133,7 +133,6 @@ namespace roboptim
 	PyObject*
 	getComputeCallback () const
 	{
-	  Py_XINCREF (computeCallback_);
 	  return computeCallback_;
 	}
 
