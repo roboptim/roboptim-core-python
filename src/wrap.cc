@@ -346,8 +346,9 @@ namespace roboptim
 	FORWARD_TYPEDEFS (fd_t);
 
 
-	explicit FiniteDifferenceGradient (const inPyFunction_t& f)
-	  : fd_t (f),
+	explicit FiniteDifferenceGradient (const inPyFunction_t& f,
+                                     typename fd_t::value_type e = ::roboptim::finiteDifferenceEpsilon)
+	  : fd_t (f, e),
 	    outFunction_t (f.inputSize (), f.outputSize (), f.getName ()),
 	    outPyFunction_t (f.inputSize (), f.outputSize (), f.getName ())
 	{
@@ -701,10 +702,11 @@ createFunction (PyObject*, PyObject* args)
 
 template <typename T>
 static PyObject*
-createFunctionWrapper (PyObject*, PyObject* args)
+createFDWrapper (PyObject*, PyObject* args)
 {
   Function* function = 0;
-  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &function))
+  double eps = ::roboptim::finiteDifferenceEpsilon;
+  if (!PyArg_ParseTuple(args, "O&|d", &detail::functionConverter, &function, &eps))
     return 0;
   if (!function)
     {
@@ -714,7 +716,7 @@ createFunctionWrapper (PyObject*, PyObject* args)
       return 0;
     }
 
-  T* fdFunction = new T (*function);
+  T* fdFunction = new T (*function, eps);
 
   PyObject* fdFunctionPy =
     PyCapsule_New (fdFunction, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
@@ -1800,10 +1802,10 @@ static PyMethodDef RobOptimCoreMethods[] =
 
     // Finite-differences functions
     {"SimpleFiniteDifferenceGradient",
-     createFunctionWrapper<FiniteDifferenceGradient<simplePolicy_t> >,
+     createFDWrapper<FiniteDifferenceGradient<simplePolicy_t> >,
      METH_VARARGS, "Create a FiniteDifferenceGradient with forward difference."},
     {"FivePointsFiniteDifferenceGradient",
-     createFunctionWrapper<FiniteDifferenceGradient<fivePointsPolicy_t> >,
+     createFDWrapper<FiniteDifferenceGradient<fivePointsPolicy_t> >,
      METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-points rule."},
 
     // Print functions

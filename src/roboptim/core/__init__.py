@@ -104,14 +104,14 @@ class FiniteDifferenceRule:
 
 
 class PyFiniteDifference(PyDifferentiableFunction):
-    def __init__ (self, f, rule = FiniteDifferenceRule.SIMPLE):
+    def __init__ (self, f, epsilon = 1e-8, rule = FiniteDifferenceRule.SIMPLE):
         PyDifferentiableFunction.__init__ \
             (self, f.inputSize (), f.outputSize (), \
              self._decodeName (f.name ()))
         if rule == FiniteDifferenceRule.SIMPLE:
-            self._fd = SimpleFiniteDifferenceGradient (f._function)
+            self._fd = SimpleFiniteDifferenceGradient (f._function, epsilon)
         elif rule == FiniteDifferenceRule.FIVE_POINTS:
-            self._fd = FivePointsFiniteDifferenceGradient (f._function)
+            self._fd = FivePointsFiniteDifferenceGradient (f._function, epsilon)
         else:
             raise ValueError("Unknown finite-difference rule.")
 
