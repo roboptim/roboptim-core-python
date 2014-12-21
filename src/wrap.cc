@@ -328,15 +328,15 @@ namespace roboptim
 	PyObject* hessianCallback_;
       };
 
+      template <typename FdgPolicy>
       class FiniteDifferenceGradient
-	: virtual public ::roboptim::GenericFiniteDifferenceGradient< ::roboptim::EigenMatrixDense,
-								      roboptim::finiteDifferenceGradientPolicies::Simple< ::roboptim::EigenMatrixDense> >,
-	  public ::roboptim::core::python::DifferentiableFunction
+	: virtual public ::roboptim::GenericFiniteDifferenceGradient
+      < ::roboptim::EigenMatrixDense, FdgPolicy>,
+	public ::roboptim::core::python::DifferentiableFunction
       {
       public:
-        typedef ::roboptim::GenericFiniteDifferenceGradient< ::roboptim::EigenMatrixDense,
-							     roboptim::finiteDifferenceGradientPolicies::Simple< ::roboptim::EigenMatrixDense> > 
-        fd_t;
+        typedef ::roboptim::GenericFiniteDifferenceGradient
+	< ::roboptim::EigenMatrixDense, FdgPolicy> fd_t;
 
         typedef ::roboptim::core::python::Function inPyFunction_t;
         typedef ::roboptim::core::python::DifferentiableFunction outPyFunction_t;
@@ -403,6 +403,11 @@ typedef roboptim::ResultWithWarnings resultWithWarnings_t;
 typedef roboptim::SolverError solverError_t;
 typedef roboptim::Parameter parameter_t;
 typedef solver_t::parameters_t parameters_t;
+
+typedef roboptim::finiteDifferenceGradientPolicies::Simple
+< ::roboptim::EigenMatrixDense> simplePolicy_t;
+typedef roboptim::finiteDifferenceGradientPolicies::FivePointsRule
+< ::roboptim::EigenMatrixDense> fivePointsPolicy_t;
 
 namespace detail
 {
@@ -1794,9 +1799,12 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Convert a SolverError object to a Python dictionary."},
 
     // Finite-differences functions
-    {"FiniteDifferenceGradient",
-     createFunctionWrapper<FiniteDifferenceGradient>,
-     METH_VARARGS, "Create a FiniteDifferenceGradient."},
+    {"SimpleFiniteDifferenceGradient",
+     createFunctionWrapper<FiniteDifferenceGradient<simplePolicy_t> >,
+     METH_VARARGS, "Create a FiniteDifferenceGradient with forward difference."},
+    {"FivePointsFiniteDifferenceGradient",
+     createFunctionWrapper<FiniteDifferenceGradient<fivePointsPolicy_t> >,
+     METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-points rule."},
 
     // Print functions
     {"strFunction",  print<Function>, METH_VARARGS,

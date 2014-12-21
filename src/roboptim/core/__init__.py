@@ -98,12 +98,23 @@ class PyDifferentiableFunction(PyFunction):
         return NotImplemented
 
 
+class FiniteDifferenceRule:
+    SIMPLE = 1
+    FIVE_POINTS = 2
+
+
 class PyFiniteDifference(PyDifferentiableFunction):
-    def __init__ (self, f):
+    def __init__ (self, f, rule = FiniteDifferenceRule.SIMPLE):
         PyDifferentiableFunction.__init__ \
             (self, f.inputSize (), f.outputSize (), \
              self._decodeName (f.name ()))
-        self._fd = FiniteDifferenceGradient (f._function)
+        if rule == FiniteDifferenceRule.SIMPLE:
+            self._fd = SimpleFiniteDifferenceGradient (f._function)
+        elif rule == FiniteDifferenceRule.FIVE_POINTS:
+            self._fd = FivePointsFiniteDifferenceGradient (f._function)
+        else:
+            raise ValueError("Unknown finite-difference rule.")
+
 
     def impl_compute (self, result, x):
         compute (self._fd, result, x)

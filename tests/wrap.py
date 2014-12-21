@@ -110,18 +110,23 @@ class TestFunction(unittest.TestCase):
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)
-        fd = roboptim.core.FiniteDifferenceGradient (f)
 
-        x = [42.,]
-        result = numpy.array([0.,])
-        result_fd = numpy.array([0.,])
-        roboptim.core.compute (fd, result_fd, x)
-        roboptim.core.compute (f, result, x)
-        numpy.testing.assert_almost_equal (result, result_fd)
-        roboptim.core.gradient (fd, result_fd, x, 0)
-        roboptim.core.bindGradient(f, gradient)
-        roboptim.core.gradient (f, result, x, 0)
-        numpy.testing.assert_almost_equal (result, result_fd, 5)
+        # Forward difference
+        fwd = roboptim.core.SimpleFiniteDifferenceGradient (f)
+        # Five-points rule
+        five_points = roboptim.core.FivePointsFiniteDifferenceGradient (f)
+
+        for fd in [fwd, five_points]:
+            x = [42.,]
+            result = numpy.array([0.,])
+            result_fd = numpy.array([0.,])
+            roboptim.core.compute (fd, result_fd, x)
+            roboptim.core.compute (f, result, x)
+            numpy.testing.assert_almost_equal (result, result_fd)
+            roboptim.core.gradient (fd, result_fd, x, 0)
+            roboptim.core.bindGradient(f, gradient)
+            roboptim.core.gradient (f, result, x, 0)
+            numpy.testing.assert_almost_equal (result, result_fd, 4)
 
 
 class TestProblem(unittest.TestCase):

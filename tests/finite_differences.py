@@ -27,7 +27,8 @@ class TestFunctionPy(unittest.TestCase):
         """
         Schittkowski problem #1
         """
-        cost = roboptim.core.PyFiniteDifference (Problem1_Cost ())
+        cost = roboptim.core.PyFiniteDifference (Problem1_Cost (),
+                rule = roboptim.core.FiniteDifferenceRule.FIVE_POINTS)
         problem = roboptim.core.PyProblem (cost)
         problem.startingPoint = numpy.array([-2., 1., ])
         problem.argumentBounds = numpy.array([[float("-inf"), float("inf")],
