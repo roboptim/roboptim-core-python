@@ -16,3 +16,5 @@ INSTALL(TARGETS wrap DESTINATION ${PYTHON_SITELIB}/roboptim/core)
 
 PYTHON_INSTALL_ON_SITE(roboptim __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core __init__.py)
+PYTHON_INSTALL_ON_SITE(roboptim/core/visualization __init__.py)
+PYTHON_INSTALL_ON_SITE(roboptim/core/visualization plotter.py)
