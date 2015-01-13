@@ -21,6 +21,7 @@ branches:
     - master
     - travis
 before_install:
+  - pip install matplotlib
   - ./.travis/dependencies/eigen-3.2
   - ./.travis/run before_install
 script:

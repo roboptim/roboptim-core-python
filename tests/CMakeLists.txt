@@ -17,3 +17,7 @@ ADD_TEST(schittkowski
 # Check finite-differences support.
 ADD_TEST(finite_differences
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/finite_differences.py")
+
+# Check plotting support.
+ADD_TEST(plot
+  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/plot.py")
