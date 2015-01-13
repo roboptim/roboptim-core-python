@@ -9,7 +9,7 @@ import numpy, numpy.testing
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
         roboptim.core.PyDifferentiableFunction.__init__ \
-            (self, 1, 1, "differentiable function test")
+            (self, 1, 1, "square function")
 
     def impl_compute (self, result, x):
         result[0] = x[0] * x[0]
@@ -22,7 +22,7 @@ class TestFunctionPy(unittest.TestCase):
     def test_function(self):
         class F(roboptim.core.PyFunction):
             def __init__ (self):
-                roboptim.core.PyFunction.__init__ (self, 1, 1, "function test")
+                roboptim.core.PyFunction.__init__ (self, 1, 1, "dummy function")
 
             def impl_compute (self, result, x):
                 result[0] = 42.
@@ -32,8 +32,10 @@ class TestFunctionPy(unittest.TestCase):
         print (f.outputSize ())
         print (f.name ())
         x = numpy.array ([1.,])
-        print (f (x))
-        print (f)
+        print ("f: %s" % f)
+        print ("x = %s" % x)
+        print ("f(x) = %s" % f (x))
+        self.assertEqual (f (x), [42.])
 
     def test_differentiable_function(self):
         f = Square ()
@@ -41,10 +43,12 @@ class TestFunctionPy(unittest.TestCase):
         print (f.outputSize ())
         print (f.name ())
         x = numpy.array ([2.,])
-        print (f (x))
-        print (f)
+        print ("f: %s" % f)
+        print ("x = %s" % x)
+        print ("f(x) = %s" % f (x))
+        self.assertEqual (f (x), x[0] * x[0])
 
-    def test_differentiable_function(self):
+    def test_problem(self):
         cost = Square()
         problem = roboptim.core.PyProblem (cost)
         print (problem)
