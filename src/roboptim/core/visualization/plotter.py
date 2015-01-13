@@ -1,15 +1,14 @@
 from abc import ABCMeta, abstractproperty
 
 from mpl_toolkits.mplot3d import Axes3D
-import matplotlib
 from matplotlib import cm
 import matplotlib.pyplot as plt
 import numpy as np
 
-class PlotStyle2D:
+class PlotStyle2D(object):
     Contour, PColorMesh = range(2)
 
-class PlotStyle3D:
+class PlotStyle3D(object):
     Contour, Wireframe, Triangle = range(3)
 
 class Plotter(object):
@@ -120,7 +119,7 @@ class Plotter3D(Plotter):
         X, Y = np.meshgrid(x, y)
 
         if cmap is not None:
-            if isstr(cmap):
+            if self.isstr(cmap):
                 cmap = cm.get_cmap(cmap)
 
         Z = self.compute_z(f,X,Y)
