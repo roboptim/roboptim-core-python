@@ -28,7 +28,7 @@ class Plotter(object):
         self.ax.set_ylabel('x[1]')
 
     @abstractmethod
-    def plot(self, f, plot_style=PlotStyle3D.Triangle, cmap=None, *args, **kwargs):
+    def plot(self, f, plot_style, cmap=None, *args, **kwargs):
         pass
 
     @abstractproperty
