@@ -43,8 +43,8 @@ class Plotter(object):
 
     def compute_z(self,f,X,Y):
         z = np.zeros(X.shape)
-        for i in xrange(X.shape[0]):
-            for j in xrange(X.shape[1]):
+        for i in range(X.shape[0]):
+            for j in range(X.shape[1]):
                 z[i,j] = f([X[i,j],Y[i,j]])
         return z
 
