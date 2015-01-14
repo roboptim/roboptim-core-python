@@ -21,11 +21,15 @@ branches:
     - master
     - travis
 before_install:
+  - sudo add-apt-repository ppa:fkrull/deadsnakes -y
+  - sudo apt-get update -q
+  - sudo apt-get install python${TRAVIS_PYTHON_VERSION}-dev
   - pip install matplotlib
   - ./.travis/dependencies/eigen-3.2
   - ./.travis/run before_install
 script:
-  - export CMAKE_ADDITIONAL_OPTIONS="-DPython_ADDITIONAL_VERSIONS=${TRAVIS_PYTHON_VERSION} -DPythonLibs_FIND_VERSION=${TRAVIS_PYTHON_VERSION}"
+  - export PYTHON_INCLUDE_DIR="`find /usr/include -name Python.h -printf '%h\n' | grep \"python${TRAVIS_PYTHON_VERSION}\"`"
+  - export CMAKE_ADDITIONAL_OPTIONS="-DPython_ADDITIONAL_VERSIONS=${TRAVIS_PYTHON_VERSION} -DPythonLibs_FIND_VERSION=${TRAVIS_PYTHON_VERSION} -DPYTHON_EXECUTABLE=${VIRTUAL_ENV}/bin/python -DPYTHON_LIBRARY=${VIRTUAL_ENV}/lib/libpython${TRAVIS_PYTHON_VERSION}.so -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} -DPYTHON_PACKAGES_PATH=${VIRTUAL_ENV}/lib/python${TRAVIS_PYTHON_VERSION}/site-packages/"
   - export LD_LIBRARY_PATH=`pkg-config --variable=plugindir roboptim-core`:$LD_LIBRARY_PATH;
   - ./.travis/run build
 after_success: ./.travis/run after_success
