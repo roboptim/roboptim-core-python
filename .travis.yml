@@ -37,4 +37,3 @@ after_failure: ./.travis/run after_failure
 matrix:
   allow_failures:
     - compiler: clang
-    - python: "3.4"
