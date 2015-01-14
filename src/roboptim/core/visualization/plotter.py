@@ -1,4 +1,4 @@
-from abc import ABCMeta, abstractproperty
+from abc import ABCMeta, abstractproperty, abstractmethod
 
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -17,13 +17,19 @@ class Plotter(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, x_range, y_range):
+    def __init__(self, x_range, y_range, x_res=10, y_res=10):
         self.x_range = x_range
         self.y_range = y_range
+        self.x_res = x_res
+        self.y_res = y_res
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection=self.projection())
         self.ax.set_xlabel('x[0]')
         self.ax.set_ylabel('x[1]')
+
+    @abstractmethod
+    def plot(self, f, plot_style=PlotStyle3D.Triangle, cmap=None, *args, **kwargs):
+        pass
 
     @abstractproperty
     def projection(self):
@@ -57,15 +63,11 @@ class Plotter2D(Plotter):
     """
     def __init__(self, x_range, y_range):
         super(Plotter2D, self).__init__(x_range, y_range)
-        self.x_res = 10
-        self.y_res = 10
 
     def projection(self):
         return None
 
-    def plot(self, f, plot_style=PlotStyle2D.PColorMesh,
-             levels=None, vmin=None, vmax=None, linewidth=0.5, alpha=None,
-             cmap=None, colors=None):
+    def plot(self, f, plot_style=PlotStyle2D.PColorMesh, cmap=None, *args, **kwargs):
         """
         Plot a RobOptim function as a 2D surface.
         """
@@ -81,16 +83,14 @@ class Plotter2D(Plotter):
 
         # Contour plotting
         if plot_style == PlotStyle2D.Contour:
-            self.ax.contourf(X, Y, Z, 1,
-                             alpha=alpha, cmap=cmap,colors=colors,
-                             vmin=vmin, vmax=vmax)
-            if levels is not None:
+            self.ax.contourf(X, Y, Z, 1, cmap=cmap, *args, **kwargs)
+            if 'levels' in kwargs:
                 self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
-                                linewidth=linewidth, colors='k', levels=levels)
+                                *args, **kwargs)
         # Color mesh plotting
         elif plot_style == PlotStyle2D.PColorMesh:
-            mesh = self.ax.pcolormesh(X, Y, Z, cmap=cmap, edgecolors='face',
-                                      vmin=vmin,vmax=vmax)
+            mesh = self.ax.pcolormesh(X, Y, Z, cmap=cmap,
+                                      *args, **kwargs)
             plt.colorbar(mesh)
         else:
             return
@@ -102,15 +102,12 @@ class Plotter3D(Plotter):
     """
     def __init__(self, x_range, y_range):
         super(Plotter3D, self).__init__(x_range, y_range)
-        self.x_res = 10
-        self.y_res = 10
 
     def projection(self):
         return "3d"
 
-    def plot(self, f, plot_style=PlotStyle3D.Triangle,
-             levels=None, vmin=None, vmax=None, linewidth=0.5, alpha=None,
-             cmap=None, colors=None):
+    def plot(self, f, plot_style=PlotStyle3D.Triangle, cmap=None,
+             *args, **kwargs):
         """
         Plot a RobOptim function as a 3D surface.
         """
@@ -126,18 +123,16 @@ class Plotter3D(Plotter):
 
         # Wireframe plotting
         if plot_style == PlotStyle3D.Wireframe:
-            self.ax.plot_wireframe(X, Y, Z, rstride=1, cstride=1)
+            self.ax.plot_wireframe(X, Y, Z, *args, **kwargs)
         # Triangle plotting
         elif plot_style == PlotStyle3D.Triangle:
             self.ax.plot_trisurf(X.flatten(), Y.flatten(), Z.flatten(),
-                                 cmap=cmap, linewidth=linewidth)
+                                 cmap=cmap, *args, **kwargs)
         # Contour plotting
         elif plot_style == PlotStyle3D.Contour:
-            self.ax.contourf(X, Y, Z, 1,
-                             alpha=alpha, cmap=cmap,colors=colors,
-                             vmin=vmin, vmax=vmax)
-            if levels is not None:
+            self.ax.contourf(X, Y, Z, 1, cmap=cmap, *args, **kwargs)
+            if 'levels' in kwargs:
                 self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
-                                linewidth=linewidth, colors='k', levels=levels)
+                                *args, **kwargs)
         else:
             return
