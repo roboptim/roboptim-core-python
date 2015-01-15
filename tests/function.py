@@ -15,7 +15,7 @@ class Square (roboptim.core.PyDifferentiableFunction):
         result[0] = x[0] * x[0]
 
     def impl_gradient (self, result, x):
-        result[0] = 2.
+        result[0] = 2. * x[0]
 
 
 class TestFunctionPy(unittest.TestCase):
