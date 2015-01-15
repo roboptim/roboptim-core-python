@@ -6,10 +6,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class PlotStyle2D(object):
-    Contour, PColorMesh = range(2)
+    Contour, Contourf, PColorMesh = range(3)
 
 class PlotStyle3D(object):
-    Contour, Wireframe, Triangle = range(3)
+    Contour, Contourf, Wireframe, Triangle = range(4)
 
 class Plotter(object):
     """
@@ -77,20 +77,24 @@ class Plotter2D(Plotter):
 
         if cmap is not None:
             if self.isstr(cmap):
-                cmap = cm.get_cmap(cmap)
+                kwargs['cmap'] = cm.get_cmap(cmap)
+            else:
+                kwargs['cmap'] = cmap
 
         Z = self.compute_z(f,X,Y)
 
         # Contour plotting
         if plot_style == PlotStyle2D.Contour:
-            self.ax.contourf(X, Y, Z, 1, cmap=cmap, *args, **kwargs)
-            if 'levels' in kwargs:
-                self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
-                                *args, **kwargs)
+            cs = self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
+                                 *args, **kwargs)
+            if 'label' in kwargs and kwargs['label'] is True:
+                plt.clabel(cs, *args, **kwargs)
+        # Filled contour plotting
+        elif plot_style == PlotStyle2D.Contourf:
+            self.ax.contourf(X, Y, Z, 1, *args, **kwargs)
         # Color mesh plotting
         elif plot_style == PlotStyle2D.PColorMesh:
-            mesh = self.ax.pcolormesh(X, Y, Z, cmap=cmap,
-                                      *args, **kwargs)
+            mesh = self.ax.pcolormesh(X, Y, Z, *args, **kwargs)
             plt.colorbar(mesh)
         else:
             return
@@ -117,7 +121,9 @@ class Plotter3D(Plotter):
 
         if cmap is not None:
             if self.isstr(cmap):
-                cmap = cm.get_cmap(cmap)
+                kwargs['cmap'] = cm.get_cmap(cmap)
+            else:
+                kwargs['cmap'] = cmap
 
         Z = self.compute_z(f,X,Y)
 
@@ -127,12 +133,13 @@ class Plotter3D(Plotter):
         # Triangle plotting
         elif plot_style == PlotStyle3D.Triangle:
             self.ax.plot_trisurf(X.flatten(), Y.flatten(), Z.flatten(),
-                                 cmap=cmap, *args, **kwargs)
+                                 *args, **kwargs)
+        # Filled contour plotting
+        elif plot_style == PlotStyle3D.Contourf:
+            self.ax.contourf(X, Y, Z, 1, *args, **kwargs)
         # Contour plotting
         elif plot_style == PlotStyle3D.Contour:
-            self.ax.contourf(X, Y, Z, 1, cmap=cmap, *args, **kwargs)
-            if 'levels' in kwargs:
-                self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
-                                *args, **kwargs)
+            self.ax.contour(X, Y, Z, max(self.x_res, self.y_res),
+                            *args, **kwargs)
         else:
             return

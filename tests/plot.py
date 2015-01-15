@@ -26,7 +26,8 @@ class TestPlot(unittest.TestCase):
         plotter = Plotter2D([-10,10],[-10,10])
         plotter.x_res = 10
         plotter.y_res = 10
-        plotter.plot(f, plot_style=PlotStyle2D.Contour)
+        plotter.plot(f, plot_style=PlotStyle2D.Contour, label=True)
+        plotter.plot(f, plot_style=PlotStyle2D.Contourf)
         plotter.plot(f, plot_style=PlotStyle2D.PColorMesh)
         plotter.add_marker([0], [0], color="black", marker="x",
                            markersize=10, markeredgewidth=2)
@@ -38,6 +39,7 @@ class TestPlot(unittest.TestCase):
         plotter.x_res = 10
         plotter.y_res = 10
         plotter.plot(f, plot_style=PlotStyle3D.Contour)
+        plotter.plot(f, plot_style=PlotStyle3D.Contourf)
         plotter.plot(f, plot_style=PlotStyle3D.Wireframe)
         plotter.plot(f, plot_style=PlotStyle3D.Triangle)
         plotter.add_marker([0], [0], color="black", marker="x",
