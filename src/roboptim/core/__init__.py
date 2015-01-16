@@ -180,13 +180,55 @@ class PySolver(object):
         else:
             raise TypeError ("unhandled case")
 
+    def setIterationCallback (self, callback):
+        setIterationCallback (self._solver, callback._callback)
+
     @property
     def parameters(self):
-        return getParameters (self._solver)
+        return getSolverParameters (self._solver)
 
     @parameters.setter
     def parameters(self, value):
-        setParameters (self._solver, value)
+        setSolverParameters (self._solver, value)
+
+class PySolverState(object):
+    def __init__(self, state):
+        self._solverState = state
+
+    def __str__ (self):
+        return strSolverState (self._solverState)
+
+    @property
+    def x(self):
+        return getSolverStateX (self._solverState)
+
+    @x.setter
+    def x(self, value):
+        setSolverStateX (self._solverState, numpy.array(value))
+
+    @property
+    def cost(self):
+        return getSolverStateCost (self._solverState)
+
+    @cost.setter
+    def cost(self, value):
+        setSolverStateCost (self._solverState, value)
+
+    @property
+    def constraintViolation(self):
+        return getSolverStateConstraintViolation (self._solverState)
+
+    @constraintViolation.setter
+    def constraintViolation(self, value):
+        setSolverStateConstraintViolation (self._solverState, value)
+
+    @property
+    def parameters(self):
+        return getSolverStateParameters (self._solverState)
+
+    @parameters.setter
+    def parameters(self, value):
+        setSolverStateParameters (self._solverState, value)
 
 class PyResult(object):
     def __init__(self, _result):
@@ -250,3 +292,17 @@ class PySolverError(object):
     def lastState(self):
         if self._dict["lastState"]:
             return self._dict["lastState"]
+
+
+class PySolverCallback(object):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__ (self, pb):
+        self._callback = SolverCallback (pb)
+        bindSolverCallback (self._callback,
+                            lambda pb, state:
+                              self.callback (pb, PySolverState(state)))
+
+    @abc.abstractmethod
+    def callback (self, pb, state):
+        return

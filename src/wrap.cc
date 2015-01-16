@@ -1,20 +1,9 @@
 #include <stdexcept>
-#include <Python.h>
-#include <numpy/arrayobject.h>
-#include <numpy/ndarraytypes.h>
 
 #include <boost/variant/static_visitor.hpp>
 #include <boost/variant/apply_visitor.hpp>
 
-#include <roboptim/core/differentiable-function.hh>
-#include <roboptim/core/function.hh>
-#include <roboptim/core/io.hh>
-#include <roboptim/core/linear-function.hh>
-#include <roboptim/core/problem.hh>
-#include <roboptim/core/solver-factory.hh>
-#include <roboptim/core/solver.hh>
-#include <roboptim/core/twice-differentiable-function.hh>
-#include <roboptim/core/finite-difference-gradient.hh>
+#include "wrap.hh"
 
 // Python 3 support
 #if PY_MAJOR_VERSION >= 3
@@ -26,395 +15,281 @@
 # define PyString_AsString   PyBytes_AsString
 #endif //! PY_MAJOR_VERSION
 
-#define FORWARD_TYPEDEFS(X)				\
-  typedef X parent_t;					\
-  typedef typename parent_t::result_t result_t;		\
-  typedef typename parent_t::size_type size_type;	\
-  typedef typename parent_t::argument_t argument_t;	\
-  typedef typename parent_t::gradient_t gradient_t;	\
-  typedef typename parent_t::jacobian_t jacobian_t
-
-
 namespace roboptim
 {
   namespace core
   {
     namespace python
     {
-      class Function : public roboptim::Function
+      Function::Function (size_type inputSize,
+                          size_type outputSize,
+                          const std::string& name)
+        : roboptim::Function (inputSize, outputSize, name),
+          computeCallback_ (0)
       {
-      public:
-	explicit Function (size_type inputSize,
-			   size_type outputSize,
-			   const std::string& name)
-	  : roboptim::Function (inputSize, outputSize, name),
-	    computeCallback_ (0)
-	{
-	}
+      }
 
-	virtual ~Function ()
-	{
-	  if (computeCallback_)
-	    {
-	      Py_DECREF (computeCallback_);
-	      computeCallback_ = 0;
-	    }
-	}
+      Function::~Function ()
+      {
+        if (computeCallback_)
+	  {
+	    Py_DECREF (computeCallback_);
+	    computeCallback_ = 0;
+	  }
+      }
 
-	virtual void
-	impl_compute (result_t& result, const argument_t& argument)
-	  const
-	{
-	  if (!computeCallback_)
-	    {
-	      PyErr_SetString
-		(PyExc_TypeError,
-		 "compute callback not set");
-	      return;
-	    }
-	  if (!PyFunction_Check (computeCallback_))
-	    {
-	      PyErr_SetString
-		(PyExc_TypeError,
-		 "compute callback is not a function");
-	      return;
-	    }
-
-	  npy_intp inputSize = static_cast<npy_intp> (this->inputSize ());
-	  npy_intp outputSize = static_cast<npy_intp> (this->outputSize ());
-
-	  PyObject* resultNumpy =
-	    PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, &result[0]);
-	  if (!resultNumpy)
-	    {
-	      PyErr_SetString (PyExc_TypeError, "cannot convert result");
-	      return;
-	    }
-
-	  PyObject* argNumpy =
-	    PyArray_SimpleNewFromData
-	    (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
-	  if (!argNumpy)
-	    {
-	      PyErr_SetString (PyExc_TypeError, "cannot convert argument");
-	      return;
-	    }
-
-	  PyObject* arglist = Py_BuildValue ("(OO)", resultNumpy, argNumpy);
-	  if (!arglist)
-	    {
-	      Py_DECREF (arglist);
-	      PyErr_SetString
-		(PyExc_TypeError, "failed to build argument list");
-	      return;
-	    }
-
-	  PyObject* resultPy = PyEval_CallObject (computeCallback_, arglist);
-	  Py_DECREF (arglist);
-	  Py_XDECREF(resultPy);
-	}
-
-	void
-	setComputeCallback (PyObject* callback)
-	{
-	  if (callback == computeCallback_)
+      void Function::impl_compute (result_t& result, const argument_t& argument)
+	const
+      {
+        if (!computeCallback_)
+	  {
+	    PyErr_SetString
+	      (PyExc_TypeError,
+	       "compute callback not set");
 	    return;
+	  }
+        if (!PyFunction_Check (computeCallback_))
+	  {
+	    PyErr_SetString
+	      (PyExc_TypeError,
+	       "compute callback is not a function");
+	    return;
+	  }
 
-	  if (computeCallback_)
-	    {
-	      Py_DECREF (computeCallback_);
-	      computeCallback_ = 0;
-	    }
+        npy_intp inputSize = static_cast<npy_intp> (this->inputSize ());
+        npy_intp outputSize = static_cast<npy_intp> (this->outputSize ());
 
-	  Py_XINCREF (callback);
-	  computeCallback_ = callback;
-	}
+        PyObject* resultNumpy =
+          PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, &result[0]);
+        if (!resultNumpy)
+	  {
+	    PyErr_SetString (PyExc_TypeError, "cannot convert result");
+	    return;
+	  }
 
-	PyObject*
-	getComputeCallback () const
-	{
-	  return computeCallback_;
-	}
+        PyObject* argNumpy =
+          PyArray_SimpleNewFromData
+          (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+        if (!argNumpy)
+	  {
+	    PyErr_SetString (PyExc_TypeError, "cannot convert argument");
+	    return;
+	  }
 
-      private:
-	PyObject* computeCallback_;
-      };
+        PyObject* arglist = Py_BuildValue ("(OO)", resultNumpy, argNumpy);
+        if (!arglist)
+	  {
+	    Py_DECREF (arglist);
+	    PyErr_SetString
+	      (PyExc_TypeError, "failed to build argument list");
+	    return;
+	  }
 
-      class DifferentiableFunction
-	: virtual public ::roboptim::DifferentiableFunction,
-	  public ::roboptim::core::python::Function
+        PyObject* resultPy = PyEval_CallObject (computeCallback_, arglist);
+        Py_DECREF (arglist);
+        Py_XDECREF(resultPy);
+      }
+
+      void Function::setComputeCallback (PyObject* callback)
       {
-      public:
-	FORWARD_TYPEDEFS (::roboptim::DifferentiableFunction);
+        if (callback == computeCallback_)
+          return;
 
-	explicit DifferentiableFunction (size_type inputSize,
-					 size_type outputSize,
-					 const std::string& name)
-	  : roboptim::DifferentiableFunction (inputSize, outputSize, name),
-	    Function (inputSize, outputSize, name),
-	    gradientCallback_ (0),
-	    jacobianCallback_ (0)
-	{
-	}
+        if (computeCallback_)
+	  {
+	    Py_DECREF (computeCallback_);
+	    computeCallback_ = 0;
+	  }
 
-	virtual ~DifferentiableFunction ()
-	{
-	  if (gradientCallback_)
-	    {
-	      Py_DECREF (gradientCallback_);
-	      gradientCallback_ = 0;
-	    }
-	  if (jacobianCallback_)
-	    {
-	      Py_DECREF (jacobianCallback_);
-	      jacobianCallback_ = 0;
-	    }
-	}
+        Py_XINCREF (callback);
+        computeCallback_ = callback;
+      }
 
-	size_type inputSize () const
-	{
-	  return ::roboptim::DifferentiableFunction::inputSize ();
-	}
-
-	size_type outputSize () const
-	{
-	  return ::roboptim::DifferentiableFunction::outputSize ();
-	}
-
-	virtual void impl_compute (result_t& result, const argument_t& argument)
-	  const
-	{
-	  ::roboptim::core::python::Function::impl_compute (result, argument);
-	}
-
-	virtual void impl_gradient (gradient_t& gradient,
-				    const argument_t& argument,
-				    size_type functionId)
-	  const
-	{
-	  if (!gradientCallback_)
-	    {
-	      PyErr_SetString
-		(PyExc_TypeError,
-		 "gradient callback not set");
-	      return;
-	    }
-	  if (!PyFunction_Check (gradientCallback_))
-	    {
-	      PyErr_SetString
-		(PyExc_TypeError,
-		 "gradient callback is not a function");
-	      return;
-	    }
-
-	  npy_intp inputSize = static_cast<npy_intp>
-	    (::roboptim::core::python::Function::inputSize ());
-
-	  PyObject* gradientNumpy =
-	    PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, &gradient[0]);
-	  if (!gradientNumpy)
-	    {
-	      PyErr_SetString (PyExc_TypeError, "cannot convert result");
-	      return;
-	    }
-
-	  PyObject* argNumpy =
-	    PyArray_SimpleNewFromData
-	    (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
-	  if (!argNumpy)
-	    {
-	      PyErr_SetString (PyExc_TypeError, "cannot convert argument");
-	      return;
-	    }
-
-	  PyObject* arglist =
-	    Py_BuildValue ("(OOi)", gradientNumpy, argNumpy, functionId);
-	  if (!arglist)
-	    {
-	      Py_DECREF (arglist);
-	      PyErr_SetString
-		(PyExc_TypeError, "failed to build argument list");
-	      return;
-	    }
-
-	  PyObject* resultPy = PyEval_CallObject (gradientCallback_, arglist);
-	  Py_DECREF (arglist);
-	  Py_XDECREF(resultPy);
-	}
-
-
-	void
-	setGradientCallback (PyObject* callback)
-	{
-	  if (gradientCallback_)
-	    {
-	      Py_DECREF (gradientCallback_);
-	      gradientCallback_ = 0;
-	    }
-
-	  Py_XINCREF (callback);
-	  gradientCallback_ = callback;
-	}
-
-	void
-	setJacobianCallback (PyObject* callback)
-	{
-	  if (jacobianCallback_)
-	    {
-	      Py_DECREF (jacobianCallback_);
-	      jacobianCallback_ = 0;
-	    }
-
-	  Py_XINCREF (callback);
-	  jacobianCallback_ = callback;
-	}
-
-      private:
-	PyObject* gradientCallback_;
-	PyObject* jacobianCallback_;
-      };
-
-      class TwiceDifferentiableFunction
-	: virtual public ::roboptim::TwiceDifferentiableFunction,
-	  public ::roboptim::core::python::DifferentiableFunction
+      PyObject* Function::getComputeCallback () const
       {
-      public:
-	FORWARD_TYPEDEFS (::roboptim::TwiceDifferentiableFunction);
+        return computeCallback_;
+      }
 
-	explicit TwiceDifferentiableFunction (size_type inputSize,
-					      size_type outputSize,
-					      const std::string& name)
-	  : ::roboptim::TwiceDifferentiableFunction (inputSize, outputSize, name),
-	    ::roboptim::DifferentiableFunction
-	    (inputSize, outputSize, name),
-	    ::roboptim::core::python::DifferentiableFunction
-	    (inputSize, outputSize, name),
-	    hessianCallback_ (0)
-	{
-	}
 
-	virtual ~TwiceDifferentiableFunction ()
-	{
-	  if (hessianCallback_)
-	    {
-	      Py_DECREF (hessianCallback_);
-	      hessianCallback_ = 0;
-	    }
-	}
 
-	virtual void impl_compute (result_t& result, const argument_t& argument)
-	  const
-	{
-	  ::roboptim::core::python::Function::impl_compute (result, argument);
-	}
-
-	virtual void impl_gradient
-	(gradient_t& gradient, const argument_t& argument, size_type functionId)
-	  const
-	{
-	  ::roboptim::core::python::DifferentiableFunction::impl_gradient
-	    (gradient, argument, functionId);
-	}
-
-	virtual void
-	impl_hessian (hessian_t& /*hessian*/,
-		      const argument_t& /*argument*/,
-		      size_type /*functionId*/) const
-	{
-	  //FIXME: implement this.
-	}
-
-      private:
-	PyObject* hessianCallback_;
-      };
-
-      template <typename FdgPolicy>
-      class FiniteDifferenceGradient
-	: virtual public ::roboptim::GenericFiniteDifferenceGradient
-      < ::roboptim::EigenMatrixDense, FdgPolicy>,
-	public ::roboptim::core::python::DifferentiableFunction
+      DifferentiableFunction::DifferentiableFunction (size_type inputSize,
+                                                      size_type outputSize,
+                                                      const std::string& name)
+        : roboptim::DifferentiableFunction (inputSize, outputSize, name),
+	  Function (inputSize, outputSize, name),
+	  gradientCallback_ (0),
+	  jacobianCallback_ (0)
       {
-      public:
-        typedef ::roboptim::GenericFiniteDifferenceGradient
-	< ::roboptim::EigenMatrixDense, FdgPolicy> fd_t;
+      }
 
-        typedef ::roboptim::core::python::Function inPyFunction_t;
-        typedef ::roboptim::core::python::DifferentiableFunction outPyFunction_t;
+      DifferentiableFunction::~DifferentiableFunction ()
+      {
+        if (gradientCallback_)
+	  {
+	    Py_DECREF (gradientCallback_);
+	    gradientCallback_ = 0;
+	  }
+        if (jacobianCallback_)
+	  {
+	    Py_DECREF (jacobianCallback_);
+	    jacobianCallback_ = 0;
+	  }
+      }
 
-        typedef ::roboptim::DifferentiableFunction outFunction_t;
+      typename DifferentiableFunction::size_type
+      DifferentiableFunction::inputSize () const
+      {
+        return ::roboptim::DifferentiableFunction::inputSize ();
+      }
 
-	FORWARD_TYPEDEFS (fd_t);
+      typename DifferentiableFunction::size_type
+      DifferentiableFunction::outputSize () const
+      {
+        return ::roboptim::DifferentiableFunction::outputSize ();
+      }
+
+      void DifferentiableFunction::impl_compute
+      (result_t& result, const argument_t& argument)
+	const
+      {
+        ::roboptim::core::python::Function::impl_compute (result, argument);
+      }
+
+      void DifferentiableFunction::impl_gradient (gradient_t& gradient,
+                                                  const argument_t& argument,
+                                                  size_type functionId)
+	const
+      {
+	if (!gradientCallback_)
+          {
+            PyErr_SetString
+              (PyExc_TypeError,
+               "gradient callback not set");
+            return;
+          }
+	if (!PyFunction_Check (gradientCallback_))
+          {
+            PyErr_SetString
+              (PyExc_TypeError,
+               "gradient callback is not a function");
+            return;
+          }
+
+	npy_intp inputSize = static_cast<npy_intp>
+	  (::roboptim::core::python::Function::inputSize ());
+
+	PyObject* gradientNumpy =
+	  PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, &gradient[0]);
+	if (!gradientNumpy)
+          {
+            PyErr_SetString (PyExc_TypeError, "cannot convert result");
+            return;
+          }
+
+	PyObject* argNumpy =
+	  PyArray_SimpleNewFromData
+	  (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	if (!argNumpy)
+          {
+            PyErr_SetString (PyExc_TypeError, "cannot convert argument");
+            return;
+          }
+
+	PyObject* arglist =
+	  Py_BuildValue ("(OOi)", gradientNumpy, argNumpy, functionId);
+	if (!arglist)
+          {
+            Py_DECREF (arglist);
+            PyErr_SetString
+              (PyExc_TypeError, "failed to build argument list");
+            return;
+          }
+
+	PyObject* resultPy = PyEval_CallObject (gradientCallback_, arglist);
+	Py_DECREF (arglist);
+	Py_XDECREF(resultPy);
+      }
+
+      void DifferentiableFunction::setGradientCallback (PyObject* callback)
+      {
+        if (gradientCallback_)
+	  {
+	    Py_DECREF (gradientCallback_);
+	    gradientCallback_ = 0;
+	  }
+
+        Py_XINCREF (callback);
+        gradientCallback_ = callback;
+      }
+
+      void DifferentiableFunction::setJacobianCallback (PyObject* callback)
+      {
+        if (jacobianCallback_)
+	  {
+	    Py_DECREF (jacobianCallback_);
+	    jacobianCallback_ = 0;
+	  }
+
+        Py_XINCREF (callback);
+        jacobianCallback_ = callback;
+      }
 
 
-	explicit FiniteDifferenceGradient (const inPyFunction_t& f,
-                                     typename fd_t::value_type e = ::roboptim::finiteDifferenceEpsilon)
-	  : fd_t (f, e),
-	    outFunction_t (f.inputSize (), f.outputSize (), f.getName ()),
-	    outPyFunction_t (f.inputSize (), f.outputSize (), f.getName ())
-	{
-	  setComputeCallback (f.getComputeCallback ());
-	}
+      TwiceDifferentiableFunction::TwiceDifferentiableFunction (size_type inputSize,
+								size_type outputSize,
+								const std::string& name)
+        : ::roboptim::TwiceDifferentiableFunction (inputSize, outputSize, name),
+	  ::roboptim::DifferentiableFunction
+	  (inputSize, outputSize, name),
+	  ::roboptim::core::python::DifferentiableFunction
+	  (inputSize, outputSize, name),
+	  hessianCallback_ (0)
+      {
+      }
 
-	virtual void impl_gradient (gradient_t& gradient,
-				    const argument_t& argument,
-				    size_type functionId)
-	  const
-	{
-	  fd_t::impl_gradient (gradient, argument, functionId);
-	}
-      };
-    } // end of namespace python.
-  } // end of namespace core.
-} // end of namespace roboptim.
+      TwiceDifferentiableFunction::~TwiceDifferentiableFunction ()
+      {
+        if (hessianCallback_)
+	  {
+	    Py_DECREF (hessianCallback_);
+	    hessianCallback_ = 0;
+	  }
+      }
+
+      void TwiceDifferentiableFunction::impl_compute
+      (result_t& result, const argument_t& argument)
+	const
+      {
+        ::roboptim::core::python::Function::impl_compute (result, argument);
+      }
+
+      void TwiceDifferentiableFunction::impl_gradient
+      (gradient_t& gradient, const argument_t& argument, size_type functionId)
+	const
+      {
+        ::roboptim::core::python::DifferentiableFunction::impl_gradient
+          (gradient, argument, functionId);
+      }
+
+      void TwiceDifferentiableFunction::impl_hessian (hessian_t& /*hessian*/,
+						      const argument_t& /*argument*/,
+						      size_type /*functionId*/) const
+      {
+        //FIXME: implement this.
+      }
+
+
+    } // end of namespace python
+  } // end of namespace core
+} // end of namespace roboptim
 
 using roboptim::core::python::Function;
 using roboptim::core::python::DifferentiableFunction;
 using roboptim::core::python::TwiceDifferentiableFunction;
 using roboptim::core::python::FiniteDifferenceGradient;
 
-static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
-  "roboptim_core_function";
-static const char* ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME =
-  "roboptim_core_problem";
-static const char* ROBOPTIM_CORE_SOLVER_CAPSULE_NAME =
-  "roboptim_core_solver";
-static const char* ROBOPTIM_CORE_RESULT_CAPSULE_NAME =
-  "roboptim_core_result";
-static const char* ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME =
-  "roboptim_core_result_with_warnings";
-static const char* ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME =
-  "roboptim_core_solver_error";
-
-typedef roboptim::Problem<
-  ::roboptim::DifferentiableFunction,
-  boost::mpl::vector< ::roboptim::LinearFunction,
-		      ::roboptim::DifferentiableFunction> >
-problem_t;
-
-typedef roboptim::Solver<
-  ::roboptim::DifferentiableFunction,
-  boost::mpl::vector< ::roboptim::LinearFunction,
-		      ::roboptim::DifferentiableFunction> >
-			  solver_t;
-
-typedef roboptim::SolverFactory<solver_t> factory_t;
-
-typedef roboptim::Result result_t;
-typedef roboptim::ResultWithWarnings resultWithWarnings_t;
-typedef roboptim::SolverError solverError_t;
-typedef roboptim::Parameter parameter_t;
-typedef solver_t::parameters_t parameters_t;
-
-typedef roboptim::finiteDifferenceGradientPolicies::Simple
-< ::roboptim::EigenMatrixDense> simplePolicy_t;
-typedef roboptim::finiteDifferenceGradientPolicies::FivePointsRule
-< ::roboptim::EigenMatrixDense> fivePointsPolicy_t;
-
 namespace detail
 {
-  template <typename T>
-  void destructor (PyObject* obj);
-
   template <>
   void destructor<problem_t> (PyObject* obj)
   {
@@ -432,6 +307,17 @@ namespace detail
     factory_t* ptr = static_cast<factory_t*>
       (PyCapsule_GetPointer
        (obj, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
+  void destructor<solverState_t> (PyObject* obj)
+  {
+    solverState_t* ptr = static_cast<solverState_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_STATE_CAPSULE_NAME));
     assert (ptr && "failed to retrieve pointer from capsule");
     if (ptr)
       delete ptr;
@@ -539,6 +425,44 @@ namespace detail
 	PyErr_SetString
 	  (PyExc_TypeError,
 	   "Problem object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  solverCallbackConverter (PyObject* obj, rcp::SolverCallback<solver_t>** address)
+  {
+    assert (address);
+    rcp::SolverCallback<solver_t>* ptr = static_cast<rcp::SolverCallback<solver_t>*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_CALLBACK_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "Solver callback object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  solverStateConverter (PyObject* obj, solverState_t** address)
+  {
+    assert (address);
+
+    solverState_t* ptr = static_cast<solverState_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_SOLVER_STATE_CAPSULE_NAME));
+
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "SolverState object expected but another type was passed");
 	return 0;
       }
     *address = ptr;
@@ -670,6 +594,71 @@ namespace detail
 
     return 0;
   }
+
+  struct StateParameterValueVisitor : public boost::static_visitor<PyObject*>
+  {
+    // TODO: inherit from ParameterValueVisitor instead
+    PyObject* operator () (const roboptim::Function::value_type& p) const
+    {
+      return PyFloat_FromDouble (p);
+    }
+
+    PyObject* operator () (const int& p) const
+    {
+      return PyInt_FromLong (p);
+    }
+
+    PyObject* operator () (const std::string& p) const
+    {
+      return PyString_FromString (p.c_str ());
+    }
+
+    PyObject* operator () (bool b) const
+    {
+      return PyBool_FromLong (b);
+    }
+
+    PyObject* operator () (const roboptim::Function::vector_t& v) const
+    {
+      npy_intp n = static_cast<npy_intp> (v.size ());
+
+      return PyArray_SimpleNewFromData
+        (1, &n, NPY_DOUBLE, const_cast<double*> (&v[0]));
+    }
+  };
+
+  stateParameter_t::stateParameterValues_t toStateParameterValue (PyObject* obj)
+  {
+    // Value can be: double, int, std::string, bool or NumPy vector.
+    // Bool
+    if (PyBool_Check (obj))
+      {
+        return bool (PyObject_RichCompareBool (obj, Py_True, Py_EQ) == 1);
+      }
+    // NumPy vector
+    else if (PyArray_Check (obj))
+      {
+	// Directly map Eigen vector to the numpy array data.
+	Eigen::Map<Function::vector_t> vecEigen
+	  (static_cast<double*>
+	   (PyArray_DATA (obj)), PyArray_ITEMSIZE (obj));
+	return vecEigen;
+      }
+    // String, unicode string, integer, double
+    else if (PyString_Check (obj) || PyUnicode_Check (obj) ||
+	     PyInt_Check (obj) || PyFloat_Check (obj))
+      {
+	return toParameterValue (obj);
+      }
+
+    PyErr_SetString
+      (PyExc_TypeError,
+       "invalid parameter value (should be double, int, string,"
+       "bool or NumPy vector).");
+
+    return 0;
+  }
+
 
   // See: http://www.boost.org/doc/libs/1_55_0/libs/smart_ptr/sp_techniques.html#static
   struct null_deleter
@@ -830,6 +819,35 @@ createSolver (PyObject*, PyObject* args)
   return solverPy;
 }
 
+template <typename S>
+static PyObject*
+createSolverCallback (PyObject*, PyObject* args)
+{
+  typedef ::roboptim::core::python::SolverCallback<S> solverCallback_t;
+
+  PyObject* problem = 0;
+  if (!PyArg_ParseTuple (args, "O", &problem))
+    return 0;
+
+  solverCallback_t* callback = 0;
+
+  try
+    {
+      callback = new solverCallback_t (problem);
+    }
+  catch (...)
+    {
+      delete callback;
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  PyObject* callbackPy =
+    PyCapsule_New (callback, ROBOPTIM_CORE_SOLVER_CALLBACK_CAPSULE_NAME,
+		   &detail::destructor<solverCallback_t>);
+  return callbackPy;
+}
+
 static PyObject*
 compute (PyObject*, PyObject* args)
 {
@@ -860,7 +878,7 @@ compute (PyObject*, PyObject* args)
     {
       PyErr_SetString
 	(PyExc_TypeError,
-	 "Argument cannot be converted to Numpy object");
+	 "Argument cannot be converted to NumPy object");
       return 0;
     }
 
@@ -922,11 +940,11 @@ gradient (PyObject*, PyObject* args)
     {
       PyErr_SetString
 	(PyExc_TypeError,
-	 "Argument cannot be converted to Numpy object");
+	 "Argument cannot be converted to NumPy object");
       return 0;
     }
 
-  // Directly map Eigen vector over Numpy x.
+  // Directly map Eigen vector over NumPy x.
   Eigen::Map<Function::argument_t> xEigen
     (static_cast<double*> (PyArray_DATA (xNumpy)), function->inputSize ());
 
@@ -1367,7 +1385,7 @@ getParameter (const parameter_t& parameter)
 }
 
 static PyObject*
-getParameters (PyObject*, PyObject* args)
+getSolverParameters (PyObject*, PyObject* args)
 {
   factory_t* factory = 0;
   if (!PyArg_ParseTuple (args, "O&",
@@ -1397,7 +1415,7 @@ getParameters (PyObject*, PyObject* args)
 }
 
 static PyObject*
-setParameters (PyObject*, PyObject* args)
+setSolverParameters (PyObject*, PyObject* args)
 {
   factory_t* factory = 0;
   PyObject* py_parameters = 0;
@@ -1456,6 +1474,332 @@ setParameters (PyObject*, PyObject* args)
   Py_INCREF (Py_None);
   return Py_None;
 }
+
+static PyObject*
+setIterationCallback (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  ::roboptim::core::python::SolverCallback<solver_t>* callback_wrapper = 0;
+
+  if (!PyArg_ParseTuple
+      (args, "O&O&:setIterationCallback",
+       &detail::factoryConverter, &factory,
+       &detail::solverCallbackConverter, &callback_wrapper))
+    return 0;
+
+  (*factory) ().setIterationCallback (callback_wrapper->callback ());
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject*
+bindSolverCallback (PyObject*, PyObject* args)
+{
+  ::roboptim::core::python::SolverCallback<solver_t>* callback_wrapper = 0;
+  PyObject* callback = 0;
+
+  if (!PyArg_ParseTuple
+      (args, "O&O:bindSolverCallback",
+       &detail::solverCallbackConverter, &callback_wrapper, &callback))
+    return 0;
+
+  if (!callback_wrapper)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve solver callback object");
+      return 0;
+    }
+
+  if (!callback)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve callback function object");
+      return 0;
+    }
+
+  if (!PyCallable_Check (callback))
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "2nd argument must be callable");
+      return 0;
+    }
+
+  callback_wrapper->setCallback (callback);
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject*
+getStateParameter (const stateParameter_t& parameter)
+{
+  PyObject* description = PyString_FromString (parameter.description.c_str ());
+  PyObject* value = boost::apply_visitor (detail::StateParameterValueVisitor (),
+                                          parameter.value);
+
+  return PyTuple_Pack (2, description, value);
+}
+
+static PyObject*
+getSolverStateParameters (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::solverStateConverter, &state))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  // In C++, parameters are: std::map<std::string, Parameter>
+  PyObject* parameters = PyDict_New ();
+
+  for (stateParameters_t::const_iterator iter = state->parameters ().begin ();
+       iter != state->parameters ().end (); iter++)
+    {
+      // Insert object to Python dictionary
+      PyDict_SetItemString (parameters, (iter->first).c_str (),
+                            getStateParameter (iter->second));
+    }
+
+  return Py_BuildValue ("O", parameters);
+}
+
+static PyObject*
+setSolverStateParameters (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  PyObject* py_parameters = 0;
+
+  if (!PyArg_ParseTuple (args, "O&O",
+			 &detail::solverStateConverter, &state, &py_parameters))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  if (!PyDict_Check (py_parameters))
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be a dictionary.");
+      return 0;
+    }
+
+  // In C++, parameters are: std::map<std::string, Parameter>
+  stateParameters_t& parameters = state->parameters ();
+  parameters.clear ();
+
+  PyObject *key, *value;
+  Py_ssize_t pos = 0;
+  stateParameter_t parameter;
+
+  // Iterate over dictionary
+  while (PyDict_Next (py_parameters, &pos, &key, &value))
+    {
+      std::string str_key = "";
+
+      if (PyBytes_Check (key))
+	{
+	  str_key = PyBytes_AsString (key);
+	}
+      else if (PyUnicode_Check (key))
+	{
+	  str_key = PyBytes_AsString (PyUnicode_AsASCIIString (key));
+	}
+      else
+	{
+	  continue;
+	}
+      if (!PyTuple_Check (value))
+        continue;
+
+      parameter.description = PyBytes_AsString (PyTuple_GetItem (value, 0));
+      parameter.value = detail::toStateParameterValue (PyTuple_GetItem (value, 1));
+      parameters[str_key] = parameter;
+    }
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject*
+getSolverStateX (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::solverStateConverter, &state))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  npy_intp n = static_cast<npy_intp> (state->x ().size ());
+  PyObject* vec = PyArray_SimpleNewFromData (1, &n,
+                                             NPY_DOUBLE, state->x ().data ());
+  if (!vec)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert state.x");
+      return 0;
+    }
+
+  return vec;
+}
+
+static PyObject*
+setSolverStateX (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  PyObject* py_parameters = 0;
+
+  if (!PyArg_ParseTuple (args, "O&O",
+			 &detail::solverStateConverter, &state, &py_parameters))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  if (!py_parameters || !PyArray_Check (py_parameters))
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be a NumPy array.");
+      return 0;
+    }
+
+  if (PyArray_NDIM (py_parameters) != 1 || state->x ().size () != PyArray_DIMS (py_parameters)[0])
+    {
+      PyErr_SetString (PyExc_TypeError, "x vector size is invalid.");
+      return 0;
+    }
+
+  Eigen::Map<Function::vector_t> vecEigen
+    (static_cast<double*> (PyArray_DATA (py_parameters)),
+     PyArray_DIMS (py_parameters)[0]);
+  state->x () = vecEigen;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject*
+getSolverStateCost (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::solverStateConverter, &state))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  if (!state->cost ())
+    {
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  PyObject* cost = PyFloat_FromDouble (*(state->cost ()));
+
+  if (!cost)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert state.cost");
+      return 0;
+    }
+
+  return cost;
+}
+
+static PyObject*
+setSolverStateCost (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  double cost = 0;
+
+  if (!PyArg_ParseTuple (args, "O&d",
+			 &detail::solverStateConverter, &state, &cost))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  state->cost () = cost;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject*
+getSolverStateConstraintViolation (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::solverStateConverter, &state))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  if (!state->constraintViolation ())
+    {
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  PyObject* violation = PyFloat_FromDouble (*(state->constraintViolation ()));
+
+  if (!violation)
+    {
+      PyErr_SetString (PyExc_TypeError, "cannot convert state.constraintViolation");
+      return 0;
+    }
+
+  return violation;
+}
+
+static PyObject*
+setSolverStateConstraintViolation (PyObject*, PyObject* args)
+{
+  solverState_t* state = 0;
+  double violation = 0;
+
+  if (!PyArg_ParseTuple (args, "O&d",
+			 &detail::solverStateConverter, &state, &violation))
+    return 0;
+
+  if (!state)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver state.");
+      return 0;
+    }
+
+  state->constraintViolation () = violation;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
 
 template <typename T>
 PyObject*
@@ -1661,6 +2005,26 @@ print<factory_t> (PyObject*, PyObject* args)
 
 template <>
 PyObject*
+print<solverState_t> (PyObject*, PyObject* args)
+{
+  solverState_t* obj = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&", &detail::solverStateConverter, &obj))
+    return 0;
+  if (!obj)
+    {
+      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
+      return 0;
+    }
+
+  std::stringstream ss;
+  ss << (*obj);
+
+  return Py_BuildValue ("s", ss.str ().c_str ());
+}
+
+template <>
+PyObject*
 print<result_t> (PyObject*, PyObject* args)
 {
   result_t* obj = 0;
@@ -1741,30 +2105,30 @@ print (PyObject*, PyObject* args)
 
 static PyMethodDef RobOptimCoreMethods[] =
   {
-    {"Function",  createFunction<Function>, METH_VARARGS,
+    {"Function", createFunction<Function>, METH_VARARGS,
      "Create a Function object."},
-    {"inputSize",  inputSize, METH_VARARGS,
+    {"inputSize", inputSize, METH_VARARGS,
      "Return function input size."},
-    {"outputSize",  outputSize, METH_VARARGS,
+    {"outputSize", outputSize, METH_VARARGS,
      "Return function output size."},
-    {"getName",  getName, METH_VARARGS,
+    {"getName", getName, METH_VARARGS,
      "Return function name."},
 
-    {"DifferentiableFunction",  createFunction<DifferentiableFunction>,
+    {"DifferentiableFunction", createFunction<DifferentiableFunction>,
      METH_VARARGS, "Create a DifferentiableFunction object."},
     {"TwiceDifferentiableFunction", createFunction<TwiceDifferentiableFunction>,
      METH_VARARGS, "Create a TwiceDifferentiableFunction object."},
-    {"Problem",  createProblem, METH_VARARGS,
+    {"Problem", createProblem, METH_VARARGS,
      "Create a Problem object."},
-    {"Solver",  createSolver, METH_VARARGS,
+    {"Solver", createSolver, METH_VARARGS,
      "Create a Solver object through the solver factory."},
-    {"compute",  compute, METH_VARARGS,
+    {"compute", compute, METH_VARARGS,
      "Evaluate a function."},
-    {"gradient",  gradient, METH_VARARGS,
+    {"gradient", gradient, METH_VARARGS,
      "Evaluate a function gradient."},
-    {"bindCompute",  bindCompute, METH_VARARGS,
+    {"bindCompute", bindCompute, METH_VARARGS,
      "Bind a Python function to function computation."},
-    {"bindGradient",  bindGradient, METH_VARARGS,
+    {"bindGradient", bindGradient, METH_VARARGS,
      "Bind a Python function to gradient computation."},
 
     {"getStartingPoint", getStartingPoint, METH_VARARGS,
@@ -1783,14 +2147,42 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Add a constraint to the problem."},
 
     // Solver functions
-    {"solve",  solve, METH_VARARGS,
+    {"solve", solve, METH_VARARGS,
      "Solve the optimization problem."},
-    {"minimum",  minimum, METH_VARARGS,
+    {"minimum", minimum, METH_VARARGS,
      "Retrieve the optimization result."},
-    {"getParameters", getParameters, METH_VARARGS,
+    {"getSolverParameters", getSolverParameters, METH_VARARGS,
      "Get the solver parameters."},
-    {"setParameters", setParameters, METH_VARARGS,
+    {"setSolverParameters", setSolverParameters, METH_VARARGS,
      "Set the solver parameters."},
+    {"setIterationCallback", setIterationCallback, METH_VARARGS,
+     "Set the solver's iteration callback."},
+
+    // SolverState functions
+    {"getSolverStateX", getSolverStateX, METH_VARARGS,
+     "Get the solver state x."},
+    {"setSolverStateX", setSolverStateX, METH_VARARGS,
+     "Set the solver state x."},
+    {"getSolverStateCost", getSolverStateCost, METH_VARARGS,
+     "Get the solver state cost."},
+    {"setSolverStateCost", setSolverStateCost, METH_VARARGS,
+     "Set the solver state cost."},
+    {"getSolverStateConstraintViolation",
+     getSolverStateConstraintViolation, METH_VARARGS,
+     "Get the solver state constraint violation."},
+    {"setSolverStateConstraintViolation",
+     setSolverStateConstraintViolation, METH_VARARGS,
+     "Set the solver state constraint violation."},
+    {"getSolverStateParameters", getSolverStateParameters, METH_VARARGS,
+     "Get the solver state parameters."},
+    {"setSolverStateParameters", setSolverStateParameters, METH_VARARGS,
+     "Set the solver state parameters."},
+
+    // Solver callback
+    {"SolverCallback", createSolverCallback<solver_t>, METH_VARARGS,
+     "Create a solver callback."},
+    {"bindSolverCallback", bindSolverCallback, METH_VARARGS,
+     "Bind a Python function that serves as a solver callback."},
 
     // Result functions
     {"resultToDict", toDict<result_t>, METH_VARARGS,
@@ -1809,17 +2201,19 @@ static PyMethodDef RobOptimCoreMethods[] =
      METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-points rule."},
 
     // Print functions
-    {"strFunction",  print<Function>, METH_VARARGS,
+    {"strFunction", print<Function>, METH_VARARGS,
      "Print a function as a Python string."},
-    {"strProblem",  print<problem_t>, METH_VARARGS,
+    {"strProblem", print<problem_t>, METH_VARARGS,
      "Print a problem as a Python string."},
-    {"strSolver",  print<factory_t>, METH_VARARGS,
+    {"strSolver", print<factory_t>, METH_VARARGS,
      "Print a solver as a Python string."},
-    {"strResult",  print<result_t>, METH_VARARGS,
+    {"strSolverState", print<solverState_t>, METH_VARARGS,
+     "Print a solver state as a Python string."},
+    {"strResult", print<result_t>, METH_VARARGS,
      "Print a result as a Python string."},
-    {"strResultWithWarnings",  print<resultWithWarnings_t>, METH_VARARGS,
+    {"strResultWithWarnings", print<resultWithWarnings_t>, METH_VARARGS,
      "Print a result as a Python string."},
-    {"strSolverError",  print<solverError_t>, METH_VARARGS,
+    {"strSolverError", print<solverError_t>, METH_VARARGS,
      "Print a solver error as a Python string."},
     {0, 0, 0, 0}
   };

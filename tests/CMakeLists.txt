@@ -14,6 +14,10 @@ ADD_TEST(function
 ADD_TEST(schittkowski
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/schittkowski.py")
 
+# Check solver callback support.
+ADD_TEST(solver_callback
+  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/solver_callback.py")
+
 # Check finite-differences support.
 ADD_TEST(finite_differences
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/finite_differences.py")

@@ -19,6 +19,7 @@ class TestFunction(unittest.TestCase):
     def test_compute(self):
         def compute(result, x):
             result[0] = 2 * x[0]
+
         f = roboptim.core.Function (1, 1, "test function")
         roboptim.core.bindCompute(f, compute)
 
@@ -91,7 +92,7 @@ class TestFunction(unittest.TestCase):
         def compute(result, x):
             result[0] = x[0] * x[0]
         def gradient(result, x, functionId):
-            result[0] = 2
+            result[0] = 2 * x[0]
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)
@@ -100,7 +101,7 @@ class TestFunction(unittest.TestCase):
         x = [15.,]
         gradient = numpy.array([0.,])
         roboptim.core.gradient (f, gradient, x, 0)
-        self.assertEqual (gradient, [2.,])
+        self.assertEqual (gradient, [30.,])
 
     def test_finite_differences(self):
         def compute(result, x):
@@ -156,10 +157,46 @@ class TestSolver(unittest.TestCase):
         roboptim.core.bindGradient(f, gradient)
 
         problem = roboptim.core.Problem (f)
+        roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.Solver ("ipopt", problem)
+            self.assertTrue(roboptim.core.strSolver (solver))
+            roboptim.core.solve (solver)
+
+            result = roboptim.core.minimum (solver)
+            print (result)
+        except:
+            print ("ipopt solver not available, passing...")
+
+    def test_solver_callback(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2 * x[0]
+
+        class TestCallback(roboptim.core.PySolverCallback):
+            def __init__ (self, pb):
+                roboptim.core.PySolverCallback.__init__ (self, pb)
+
+            def callback (self, pb, state):
+                print("Dummy callback!")
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        problem = roboptim.core.Problem (f)
+        roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
+
+        callback = TestCallback (problem)
+        print (callback)
+
+        # Let the test fail if the solver does not exist.
+        try:
+            solver = roboptim.core.Solver ("ipopt", problem)
+            roboptim.core.setIterationCallback (solver, callback)
             self.assertTrue(roboptim.core.strSolver (solver))
             roboptim.core.solve (solver)
 
