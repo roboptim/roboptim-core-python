@@ -95,6 +95,10 @@ namespace roboptim
                                     size_type functionId)
           const;
 
+        virtual void impl_jacobian (jacobian_t& jacobian,
+                                    const argument_t& argument)
+          const;
+
         void
 	setGradientCallback (PyObject* callback);
 

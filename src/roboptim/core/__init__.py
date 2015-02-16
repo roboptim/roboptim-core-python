@@ -79,6 +79,16 @@ class PyDifferentiableFunction(PyFunction):
         gradientCb = lambda result, x, fid: self.impl_gradient (result, x, fid)
         bindGradient (self._function, gradientCb)
 
+        # If the user reimplemented impl_jacobian
+        if self._impl_jacobian_overriden():
+            jacobianCb = lambda result, x: self.impl_jacobian (result, x)
+            bindJacobian (self._function, jacobianCb)
+        # Else we will rely on RobOptim's default C++ implementation
+
+    def _impl_jacobian_overriden(self):
+        return id(PyDifferentiableFunction.impl_jacobian.im_func) \
+               != id(self.impl_jacobian.im_func)
+
     @abc.abstractmethod
     def impl_gradient (self, result, x, functionId):
         return
@@ -87,6 +97,14 @@ class PyDifferentiableFunction(PyFunction):
         g = numpy.array ([0.,])
         gradient (self._function, g, x, functionId)
         return g
+
+    def impl_jacobian (self, result, x):
+        return NotImplementedError
+
+    def jacobian (self, x):
+        jac = numpy.array ([[0.,]])
+        jacobian (self._function, jac, x)
+        return jac
 
     @classmethod
     def __subclasshook__ (cls, C):

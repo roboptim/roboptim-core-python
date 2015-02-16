@@ -210,6 +210,69 @@ namespace roboptim
 	Py_XDECREF(resultPy);
       }
 
+      void DifferentiableFunction::impl_jacobian (jacobian_t& jacobian,
+                                                  const argument_t& argument)
+	const
+      {
+	// Jacobian callback not specified, we fallback on parent implementation
+	if (!jacobianCallback_)
+	  {
+	    roboptim::DifferentiableFunction::impl_jacobian (jacobian, argument);
+	    return;
+	  }
+	else // Use Jacobian callback defined in Python
+	  {
+	    if (!PyFunction_Check (jacobianCallback_))
+	      {
+		PyErr_SetString
+		  (PyExc_TypeError,
+		   "jacobian callback is not a function");
+		return;
+	      }
+
+	    // TODO: check storage order (NumPy excepts C-style, but Eigen uses RowMajor as default)
+	    npy_intp inputSize =
+	      static_cast<npy_intp> (::roboptim::core::python::Function::inputSize ());
+	    npy_intp outputSize =
+	      static_cast<npy_intp> (::roboptim::core::python::Function::outputSize ());
+
+	    npy_intp sizes[2] = {outputSize, inputSize};
+
+	    PyObject* jacobianNumpy =
+	      PyArray_SimpleNewFromData (2, &sizes[0], NPY_DOUBLE,
+					 jacobian.data ());
+	    if (!jacobianNumpy)
+	      {
+		PyErr_SetString (PyExc_TypeError, "cannot convert result");
+		return;
+	      }
+
+	    PyObject* argNumpy =
+	      PyArray_SimpleNewFromData
+	      (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	    if (!argNumpy)
+	      {
+		PyErr_SetString (PyExc_TypeError, "cannot convert argument");
+		return;
+	      }
+
+	    PyObject* arglist =
+	      Py_BuildValue ("(OO)", jacobianNumpy, argNumpy);
+	    if (!arglist)
+	      {
+		Py_DECREF (arglist);
+		PyErr_SetString
+		  (PyExc_TypeError, "failed to build argument list");
+		return;
+	      }
+
+	    PyObject* resultPy = PyEval_CallObject (jacobianCallback_, arglist);
+
+	    Py_DECREF (arglist);
+	    Py_XDECREF(resultPy);
+	  }
+      }
+
       void DifferentiableFunction::setGradientCallback (PyObject* callback)
       {
         if (gradientCallback_)
@@ -963,6 +1026,70 @@ gradient (PyObject*, PyObject* args)
 
 
 static PyObject*
+jacobian (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  PyObject* x = 0;
+  PyObject* jacobian = 0;
+
+  if (!PyArg_ParseTuple
+      (args, "O&OO",
+       detail::functionConverter, &function, &jacobian, &x))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+
+  DifferentiableFunction* dfunction =
+    dynamic_cast<DifferentiableFunction*> (function);
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "argument 1 should be a differentiable function object");
+      return 0;
+    }
+
+  PyObject* jacobianNumpy =
+    PyArray_FROM_OTF(jacobian, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
+
+  // Try to build an array type from x.
+  // All types providing a sequence interface are compatible.
+  // Tuples, sequences and Numpy types for instance.
+  PyObject* xNumpy =
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+  if (!xNumpy)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Argument cannot be converted to NumPy object");
+      return 0;
+    }
+
+  // Directly map Eigen vector over NumPy x.
+  Eigen::Map<Function::argument_t> xEigen
+    (static_cast<double*> (PyArray_DATA (xNumpy)), function->inputSize ());
+
+  // Directly map Eigen Jacobian to the numpy array data.
+  Eigen::Map<DifferentiableFunction::jacobian_t> jacobianEigen
+    (static_cast<double*> (PyArray_DATA (jacobianNumpy)),
+     dfunction->jacobianSize ().first, dfunction->jacobianSize ().second);
+
+  // Warning: this works as long as RobOptim uses row-major storage.
+  jacobianEigen = dfunction->jacobian (xEigen);
+  if (PyErr_Occurred ())
+    return 0;
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+
+static PyObject*
 bindCompute (PyObject*, PyObject* args)
 {
   Function* function = 0;
@@ -1038,6 +1165,50 @@ bindGradient (PyObject*, PyObject* args)
     }
 
   dfunction->setGradientCallback (callback);
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject*
+bindJacobian (PyObject*, PyObject* args)
+{
+  Function* function = 0;
+  PyObject* callback = 0;
+  if (!PyArg_ParseTuple
+      (args, "O&O:bindJacobian",
+       detail::functionConverter, &function, &callback))
+    return 0;
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+
+  DifferentiableFunction* dfunction
+    = dynamic_cast<DifferentiableFunction*> (function);
+
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "instance of DifferentiableFunction expected as first argument");
+      return 0;
+    }
+  if (!callback)
+    {
+      PyErr_SetString (PyExc_TypeError, "Failed to retrieve callback object");
+      return 0;
+    }
+  if (!PyCallable_Check (callback))
+    {
+      PyErr_SetString (PyExc_TypeError, "2nd argument must be callable");
+      return 0;
+    }
+
+  dfunction->setJacobianCallback (callback);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -2126,10 +2297,14 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Evaluate a function."},
     {"gradient", gradient, METH_VARARGS,
      "Evaluate a function gradient."},
+    {"jacobian", jacobian, METH_VARARGS,
+     "Evaluate a function Jacobian."},
     {"bindCompute", bindCompute, METH_VARARGS,
      "Bind a Python function to function computation."},
     {"bindGradient", bindGradient, METH_VARARGS,
      "Bind a Python function to gradient computation."},
+    {"bindJacobian", bindJacobian, METH_VARARGS,
+     "Bind a Python function to Jacobian computation."},
 
     {"getStartingPoint", getStartingPoint, METH_VARARGS,
      "Get the problem starting point."},

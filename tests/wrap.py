@@ -103,6 +103,44 @@ class TestFunction(unittest.TestCase):
         roboptim.core.gradient (f, gradient, x, 0)
         self.assertEqual (gradient, [30.,])
 
+    def test_jacobian(self):
+        def compute(result, x):
+            result[0] = x[0] + x[1]
+            result[1] = x[0] - x[1]
+            result[2] = x[0] * x[1]
+        def gradient(result, x, functionId):
+            raise NotImplementedError
+        def jacobian(result, x):
+            # x + y
+            result[0,0] = 1.
+            result[0,1] = 1.
+
+            # x - y
+            result[1,0] =  1.
+            result[1,1] = -1.
+
+            # x * y
+            result[2,0] = x[1]
+            result[2,1] = x[0]
+
+        f = roboptim.core.DifferentiableFunction (2, 3, "x + y, x - y, x * y")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+        roboptim.core.bindJacobian(f, jacobian)
+        inputSize = roboptim.core.inputSize(f)
+        outputSize = roboptim.core.outputSize(f)
+
+        x = [15., 10.]
+
+        gradient = numpy.array([0., 0.])
+        self.assertRaises(NotImplementedError,
+                          lambda: roboptim.core.gradient (f, gradient, x, 0))
+
+        jacobian = numpy.zeros((outputSize, inputSize))
+        roboptim.core.jacobian (f, jacobian, x)
+        expected_jacobian = numpy.array([[1., 1.], [1., -1.], [10., 15.]])
+        numpy.testing.assert_almost_equal (jacobian, expected_jacobian)
+
     def test_finite_differences(self):
         def compute(result, x):
             result[0] = x[0] * x[0]

@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from __future__ import \
     print_function, unicode_literals, absolute_import, division
 
@@ -14,8 +15,23 @@ class Square (roboptim.core.PyDifferentiableFunction):
     def impl_compute (self, result, x):
         result[0] = x[0] * x[0]
 
-    def impl_gradient (self, result, x):
+    def impl_gradient (self, result, x, f_id):
         result[0] = 2. * x[0]
+
+
+class SquareJacobian (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 1, 1, "square function")
+
+    def impl_compute (self, result, x):
+        result[0] = x[0] * x[0]
+
+    def impl_gradient (self, result, x, f_id):
+        raise NotImplementedError
+
+    def impl_jacobian (self, result, x):
+        result[0,0] = 2. * x[0]
 
 
 class TestFunctionPy(unittest.TestCase):
@@ -42,11 +58,27 @@ class TestFunctionPy(unittest.TestCase):
         print (f.inputSize ())
         print (f.outputSize ())
         print (f.name ())
-        x = numpy.array ([2.,])
+        x = numpy.array ([6.,])
         print ("f: %s" % f)
         print ("x = %s" % x)
         print ("f(x) = %s" % f (x))
         self.assertEqual (f (x), x[0] * x[0])
+        print ("df(x) = %s" % f.gradient (x, 0))
+        self.assertEqual (f.gradient (x, 0), 2. * x[0])
+
+    def test_differentiable_function_jacobian(self):
+        f = SquareJacobian ()
+        print (f.inputSize ())
+        print (f.outputSize ())
+        print (f.name ())
+        x = numpy.array ([6.,])
+        print ("f: %s" % f)
+        print ("x = %s" % x)
+        print ("f(x) = %s" % f (x))
+        self.assertEqual (f (x), x[0] * x[0])
+        self.assertRaises(NotImplementedError, lambda: f.gradient (x, 0))
+        print ("Jac(f)(x) = %s" % f.jacobian (x))
+        self.assertEqual (f.jacobian (x), 2. * x[0])
 
     def test_problem(self):
         cost = Square()
