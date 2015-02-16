@@ -86,8 +86,8 @@ class PyDifferentiableFunction(PyFunction):
         # Else we will rely on RobOptim's default C++ implementation
 
     def _impl_jacobian_overriden(self):
-        return id(PyDifferentiableFunction.impl_jacobian.im_func) \
-               != id(self.impl_jacobian.im_func)
+        return id(PyDifferentiableFunction.__dict__['impl_jacobian']) \
+               != id(self.impl_jacobian.__func__)
 
     @abc.abstractmethod
     def impl_gradient (self, result, x, functionId):
