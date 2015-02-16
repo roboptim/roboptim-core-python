@@ -7,6 +7,7 @@ import unittest
 import roboptim.core
 import numpy, numpy.testing
 
+nlp_solver = "ipopt"
 
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
@@ -28,10 +29,10 @@ class IterCallback (roboptim.core.PySolverCallback):
     def callback (self, pb, state):
         parameters = state.parameters
         if self.iter > 0:
-            if 'ipopt.stop' in parameters:
-                stop = list(parameters['ipopt.stop'])
+            if "%s.stop" % nlp_solver in parameters:
+                stop = list(parameters["%s.stop" % nlp_solver])
                 stop[1] = True
-                parameters['ipopt.stop'] = tuple(stop)
+                parameters["%s.stop" % nlp_solver] = tuple(stop)
             state.parameters = parameters
         print("[iter %i]\n%s\n" % (self.iter, state))
         self.iter += 1
@@ -49,7 +50,7 @@ class TestSolverCallbackPy(unittest.TestCase):
 
         # Let the test fail if the solver does not exist.
         try:
-            solver = roboptim.core.PySolver ("ipopt", problem)
+            solver = roboptim.core.PySolver (nlp_solver, problem)
             solver.setIterationCallback (callback)
             print (solver)
             solver.solve ()
