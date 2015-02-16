@@ -1634,10 +1634,24 @@ setSolverParameters (PyObject*, PyObject* args)
 	{
 	  continue;
 	}
-      if (!PyTuple_Check (value))
+      if (!PyTuple_Check (value) || PyTuple_Size (value) != 2)
         continue;
 
-      parameter.description = PyBytes_AsString (PyTuple_GetItem (value, 0));
+      PyObject* desc = PyTuple_GetItem (value, 0);
+
+      if (PyBytes_Check (desc))
+	{
+	  parameter.description = PyBytes_AsString (desc);
+	}
+      else if (PyUnicode_Check (desc))
+	{
+	  parameter.description = PyBytes_AsString (PyUnicode_AsASCIIString (desc));
+	}
+      else
+	{
+	  continue;
+	}
+
       parameter.value = detail::toParameterValue (PyTuple_GetItem (value, 1));
       parameters[str_key] = parameter;
     }
@@ -1790,10 +1804,24 @@ setSolverStateParameters (PyObject*, PyObject* args)
 	{
 	  continue;
 	}
-      if (!PyTuple_Check (value))
+      if (!PyTuple_Check (value) || PyTuple_Size (value) != 2)
         continue;
 
-      parameter.description = PyBytes_AsString (PyTuple_GetItem (value, 0));
+      PyObject* desc = PyTuple_GetItem (value, 0);
+
+      if (PyBytes_Check (desc))
+	{
+	  parameter.description = PyBytes_AsString (desc);
+	}
+      else if (PyUnicode_Check (desc))
+	{
+	  parameter.description = PyBytes_AsString (PyUnicode_AsASCIIString (desc));
+	}
+      else
+	{
+	  continue;
+	}
+
       parameter.value = detail::toStateParameterValue (PyTuple_GetItem (value, 1));
       parameters[str_key] = parameter;
     }
