@@ -256,6 +256,10 @@ namespace detail
   struct ParameterValueVisitor;
   struct StateParameterValueVisitor;
   struct null_deleter;
+  struct pyobject_deleter;
+
+  template <typename T>
+  boost::shared_ptr<T> to_shared_ptr (T* o, PyObject* py_o);
 } // end of namespace detail
 
 # include "wrap.hxx"

@@ -359,6 +359,38 @@ using roboptim::core::python::FiniteDifferenceGradient;
 
 namespace detail
 {
+  // See: http://www.boost.org/doc/libs/1_55_0/libs/smart_ptr/sp_techniques.html#static
+  struct null_deleter
+  {
+    void operator () (void const *) const
+    {
+    }
+  };
+
+  struct pyobject_deleter
+  {
+  public:
+
+    pyobject_deleter (PyObject* p): p_ (p)
+    {
+    }
+
+    void operator () (void const *)
+    {
+      Py_DECREF (p_);
+    }
+
+  private:
+    PyObject* p_;
+  };
+
+  template <typename T>
+  boost::shared_ptr<T> to_shared_ptr (T* o, PyObject* py_o)
+  {
+    Py_INCREF (py_o);
+    return boost::shared_ptr<T> (o, pyobject_deleter (py_o));
+  }
+
   template <>
   void destructor<problem_t> (PyObject* obj)
   {
@@ -727,15 +759,6 @@ namespace detail
 
     return 0;
   }
-
-
-  // See: http://www.boost.org/doc/libs/1_55_0/libs/smart_ptr/sp_techniques.html#static
-  struct null_deleter
-  {
-    void operator () (void const *) const
-    {
-    }
-  };
 } // end of namespace detail.
 
 template <typename T>
@@ -1476,9 +1499,11 @@ addConstraint (PyObject*, PyObject* args)
     }
 
   // If we just used a boost::shared_ptr, the constraint would be freed when the
-  // problem disappears, so we use a null deleter to prevent that.
-  boost::shared_ptr<DifferentiableFunction> constraint (dfunction,
-                                                        detail::null_deleter ());
+  // problem disappears, so we use a custom deleter that keeps track of the
+  // Python object's reference counter to prevent that.
+  boost::shared_ptr<DifferentiableFunction> constraint
+    = detail::to_shared_ptr<DifferentiableFunction>
+    (dfunction, PyTuple_GetItem (args, 1));
   problem->addConstraint (constraint, Function::makeInterval (min, max));
 
   Py_INCREF (Py_None);
