@@ -169,6 +169,8 @@ namespace roboptim
           setComputeCallback (f.getComputeCallback ());
         }
 
+        virtual ~FiniteDifferenceGradient () {}
+
         virtual void impl_gradient (gradient_t& gradient,
                                     const argument_t& argument,
                                     size_type functionId)
