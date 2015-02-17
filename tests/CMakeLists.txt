@@ -22,6 +22,10 @@ ADD_TEST(solver_callback
 ADD_TEST(finite_differences
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/finite_differences.py")
 
+# Check function pool support.
+ADD_TEST(function_pool
+  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/function_pool.py")
+
 # Check plotting support.
 ADD_TEST(plot
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/plot.py")

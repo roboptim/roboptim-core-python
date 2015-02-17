@@ -348,6 +348,46 @@ namespace roboptim
       }
 
 
+      FunctionPool::FunctionPool (const callback_ptr callback,
+                                  const functionList_t& functions,
+                                  const std::string& name)
+        : ::roboptim::DifferentiableFunction (pool_t::inputSize (functions),
+					      pool_t::outputSize (functions),
+					      name),
+	  pyFunction_t (pool_t::inputSize (functions),
+			pool_t::outputSize (functions),
+			name),
+	  pool_ (callback, functions, name)
+      {
+      }
+
+
+      FunctionPool::~FunctionPool ()
+      {
+      }
+
+      void FunctionPool::impl_compute (result_t& result, const argument_t& x) const
+      {
+        pool_.impl_compute (result, x);
+      }
+
+      void FunctionPool::impl_gradient (gradient_t& gradient,
+                                        const argument_t& x,
+                                        size_type functionId) const
+      {
+        pool_.impl_gradient (gradient, x, functionId);
+      }
+
+      void FunctionPool::impl_jacobian (jacobian_t& jacobian,
+                                        const argument_t& x) const
+      {
+        pool_.impl_jacobian (jacobian, x);
+      }
+
+      std::ostream& FunctionPool::print (std::ostream& o) const
+      {
+        return pool_.print (o);
+      }
     } // end of namespace python
   } // end of namespace core
 } // end of namespace roboptim
@@ -356,6 +396,7 @@ using roboptim::core::python::Function;
 using roboptim::core::python::DifferentiableFunction;
 using roboptim::core::python::TwiceDifferentiableFunction;
 using roboptim::core::python::FiniteDifferenceGradient;
+using roboptim::core::python::FunctionPool;
 
 namespace detail
 {
@@ -492,6 +533,51 @@ namespace detail
       }
 
     *address = ptr;
+
+    return 1;
+  }
+
+  int
+  functionListConverter (PyObject* obj, FunctionPool::functionList_t** v)
+  {
+    assert (v);
+
+    if (!PyList_CheckExact (obj))
+      {
+	PyErr_SetString (PyExc_TypeError, "Invalid Function list given.");
+	return 0;
+      }
+
+    // For each function
+    for (int i = 0; i < PyList_Size (obj); ++i)
+      {
+	PyObject* fPy = PyList_GetItem (obj, i);
+
+	Function* f = static_cast<Function*>
+	  (PyCapsule_GetPointer
+	   (fPy, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME));
+
+	if (!f)
+	  {
+	    PyErr_SetString
+	      (PyExc_TypeError,
+	       "Function object expected but another type was passed");
+	    return 0;
+	  }
+
+	DifferentiableFunction* df = dynamic_cast<DifferentiableFunction*> (f);
+
+	if (!df)
+	  {
+	    PyErr_SetString
+	      (PyExc_TypeError,
+	       "DifferentiableFunction object expected but another type was passed");
+	    return 0;
+	  }
+
+	// Convert ptr to shared_ptr
+	(*v)->push_back (detail::to_shared_ptr<DifferentiableFunction> (df, fPy));
+      }
 
     return 1;
   }
@@ -779,6 +865,35 @@ createFunction (PyObject*, PyObject* args)
     PyCapsule_New (function, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
 		   &detail::destructor<T>);
   return functionPy;
+}
+
+
+template <>
+PyObject*
+createFunction<FunctionPool> (PyObject*, PyObject* args)
+{
+  const char* name = 0;
+  FunctionPool::callback_t* callback = 0;
+  FunctionPool::functionList_t* functions = new FunctionPool::functionList_t ();
+
+  if (!PyArg_ParseTuple(args, "O&O&s",
+                        &detail::functionConverter, &callback,
+                        &detail::functionListConverter, &functions,
+                        &name))
+    return 0;
+
+  std::string name_ = (name) ? name : "";
+  FunctionPool::callback_ptr p_callback
+    = detail::to_shared_ptr<FunctionPool::callback_t>
+    (callback, PyTuple_GetItem (args, 0));
+  FunctionPool* pool = new FunctionPool (p_callback, *functions, name_);
+  delete functions;
+
+  PyObject* poolPy =
+    PyCapsule_New (pool, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
+		   &detail::destructor<FunctionPool>);
+
+  return poolPy;
 }
 
 template <typename T>
@@ -2379,6 +2494,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Set the problem scales."},
     {"addConstraint", addConstraint, METH_VARARGS,
      "Add a constraint to the problem."},
+
+    // FunctionPool functions
+    {"FunctionPool", createFunction<FunctionPool>,
+     METH_VARARGS, "Create a FunctionPool object."},
 
     // Solver functions
     {"solve", solve, METH_VARARGS,

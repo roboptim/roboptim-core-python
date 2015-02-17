@@ -14,6 +14,7 @@
 #include <roboptim/core/solver-factory.hh>
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
+#include <roboptim/core/function-pool.hh>
 #include <roboptim/core/finite-difference-gradient.hh>
 
 
@@ -205,6 +206,43 @@ namespace roboptim
         PyObject* callback_;
         PyObject* pb_;
       };
+
+
+      class FunctionPool : virtual public ::roboptim::DifferentiableFunction,
+			   public ::roboptim::core::python::DifferentiableFunction
+      {
+      public:
+        FORWARD_TYPEDEFS (::roboptim::DifferentiableFunction);
+
+        typedef ::roboptim::core::python::DifferentiableFunction pyFunction_t;
+        typedef ::roboptim::DifferentiableFunction function_t;
+
+        typedef ::roboptim::FunctionPool<function_t,
+					 boost::mpl::vector<function_t> > pool_t;
+        typedef pool_t::callback_t callback_t;
+        typedef pool_t::callback_ptr callback_ptr;
+        typedef pool_t::functionList_t functionList_t;
+
+        explicit FunctionPool (const callback_ptr callback,
+                               const functionList_t& functions,
+                               const std::string& name);
+
+        virtual ~FunctionPool ();
+
+        virtual void impl_compute (result_t& result, const argument_t& x) const;
+
+        virtual void impl_gradient (gradient_t& gradient,
+                                    const argument_t& x,
+                                    size_type functionId = 0) const;
+
+        virtual void impl_jacobian (jacobian_t& jacobian,
+                                    const argument_t& x) const;
+
+        virtual std::ostream& print (std::ostream&) const;
+
+      private:
+	pool_t pool_;
+      };
     } // end of namespace python.
   } // end of namespace core.
 } // end of namespace roboptim.
@@ -245,6 +283,7 @@ namespace detail
   void destructor (PyObject* obj);
 
   int functionConverter (PyObject* obj, rcp::Function** address);
+  int functionListConverter (PyObject* obj, rcp::FunctionPool::functionList_t** address);
   int problemConverter (PyObject* obj, problem_t** address);
   int factoryConverter (PyObject* obj, factory_t** address);
   int solverCallbackConverter (PyObject* obj, rcp::SolverCallback<solver_t>** address);

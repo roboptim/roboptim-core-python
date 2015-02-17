@@ -166,6 +166,44 @@ class TestFunction(unittest.TestCase):
             roboptim.core.gradient (f, result, x, 0)
             numpy.testing.assert_almost_equal (result, result_fd, 4)
 
+    def test_function_pool(self):
+        data = numpy.zeros(2)
+
+        def callback_compute(result, x):
+            data[0] = x[0] * x[0]
+        def callback_gradient(result, x, functionId):
+            data[1] = 2 * x[0]
+
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2 * x[0]
+
+        callback = roboptim.core.DifferentiableFunction (1, 1, "callback")
+        roboptim.core.bindCompute(callback, callback_compute)
+        roboptim.core.bindGradient(callback, callback_gradient)
+        x = [42.,]
+        result = numpy.array([0.,])
+        roboptim.core.compute (callback, result, x)
+        self.assertEqual (data[0], x[0]*x[0])
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        x = [15.,]
+        gradient = numpy.array([0.,])
+        roboptim.core.gradient (f, gradient, x, 0)
+        self.assertEqual (gradient, [30.,])
+
+        pool = roboptim.core.FunctionPool (callback, [f], "pool")
+        x = [10.,]
+        data = numpy.zeros(2)
+        jac = numpy.zeros((1,1))
+        roboptim.core.compute (pool, result, x)
+        roboptim.core.jacobian (pool, jac, x)
+        numpy.testing.assert_almost_equal (data, [x[0]*x[0], 2. * x[0]])
+
 
 class TestProblem(unittest.TestCase):
     def test_problem(self):

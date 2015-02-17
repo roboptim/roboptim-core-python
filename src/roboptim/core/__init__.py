@@ -116,6 +116,40 @@ class PyDifferentiableFunction(PyFunction):
         return NotImplemented
 
 
+class PyFunctionPool(PyDifferentiableFunction):
+    def __init__ (self, callback, functions, name = ""):
+        self._callback = callback
+        self._functions = functions
+        self._function = FunctionPool (callback._function,
+                                       [f._function for f in functions],
+                                       self._formatName(name))
+
+    def impl_compute (self, result, x):
+        compute (self._function, result, x)
+
+    def impl_gradient (self, result, x, functionId):
+        raise NotImplementedError
+
+    def impl_jacobian (self, result, x):
+        # FIXME: find why this fails (callback not called)
+        #        In the meantime, we implement this in Python
+        #jacobian (self._function, result, x)
+
+        # Run callback
+        self._callback.jacobian (x)
+        # Fill Jacobian
+        row = 0
+        for f in self._functions:
+            size = f.outputSize ()
+            result[row:row+size,:] = f.jacobian (x)
+            row += size
+
+    def jacobian (self, x):
+        jac = numpy.zeros ((self.outputSize (), self.inputSize ()))
+        self.impl_jacobian (jac, x)
+        return jac
+
+
 class FiniteDifferenceRule:
     SIMPLE = 1
     FIVE_POINTS = 2
