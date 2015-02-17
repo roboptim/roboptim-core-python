@@ -17,13 +17,11 @@
 #include <roboptim/core/finite-difference-gradient.hh>
 
 
+#define FORWARD_TYPEDEFS_(X)				\
+  ROBOPTIM_DIFFERENTIABLE_FUNCTION_FWD_TYPEDEFS_ (X)
+
 #define FORWARD_TYPEDEFS(X)				\
-  typedef X parent_t;					\
-  typedef typename parent_t::result_t result_t;		\
-  typedef typename parent_t::size_type size_type;	\
-  typedef typename parent_t::argument_t argument_t;	\
-  typedef typename parent_t::gradient_t gradient_t;	\
-  typedef typename parent_t::jacobian_t jacobian_t
+  ROBOPTIM_DIFFERENTIABLE_FUNCTION_FWD_TYPEDEFS (X)
 
 // Capsule names
 static const char* ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME =
@@ -156,8 +154,7 @@ namespace roboptim
 
         typedef ::roboptim::DifferentiableFunction outFunction_t;
 
-        FORWARD_TYPEDEFS (fd_t);
-
+        FORWARD_TYPEDEFS_ (fd_t);
 
         explicit FiniteDifferenceGradient (const inPyFunction_t& f,
                                            typename fd_t::value_type e = ::roboptim::finiteDifferenceEpsilon)
@@ -229,8 +226,8 @@ typedef roboptim::SolverError solverError_t;
 typedef roboptim::Parameter parameter_t;
 typedef solver_t::parameters_t parameters_t;
 typedef solver_t::solverState_t solverState_t;
-typedef roboptim::StateParameter<typename problem_t::function_t> stateParameter_t;
-typedef typename solverState_t::parameters_t stateParameters_t;
+typedef roboptim::StateParameter<problem_t::function_t> stateParameter_t;
+typedef solverState_t::parameters_t stateParameters_t;
 
 typedef roboptim::finiteDifferenceGradientPolicies::Simple
 < ::roboptim::EigenMatrixDense> simplePolicy_t;

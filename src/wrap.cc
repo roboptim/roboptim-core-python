@@ -136,13 +136,13 @@ namespace roboptim
 	  }
       }
 
-      typename DifferentiableFunction::size_type
+      DifferentiableFunction::size_type
       DifferentiableFunction::inputSize () const
       {
         return ::roboptim::DifferentiableFunction::inputSize ();
       }
 
-      typename DifferentiableFunction::size_type
+      DifferentiableFunction::size_type
       DifferentiableFunction::outputSize () const
       {
         return ::roboptim::DifferentiableFunction::outputSize ();
@@ -1423,7 +1423,7 @@ setArgumentScales (PyObject*, PyObject* args)
     (static_cast<double*> (PyArray_DATA (scalesNumpy)),
      problem->function ().inputSize ());
 
-  for (Function::size_type i = 0; i < problem->function ().inputSize (); ++i)
+  for (size_t i = 0; i < static_cast<size_t> (problem->function ().inputSize ()); ++i)
     problem->argumentScales ()[i] = scalesEigen[i];
 
 
