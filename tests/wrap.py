@@ -51,9 +51,8 @@ class TestFunction(unittest.TestCase):
         f = roboptim.core.DifferentiableFunction (1, 1, "test function")
         roboptim.core.bindCompute(f, compute)
 
-        #FIXME: why is it so?!
         self.assertEqual (roboptim.core.strFunction (f),
-                          "test function (not differentiable)")
+                          "test function (differentiable function)")
 
         x = [15.,]
         result = numpy.array([0.,])

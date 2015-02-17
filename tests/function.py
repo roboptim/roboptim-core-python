@@ -52,6 +52,7 @@ class TestFunctionPy(unittest.TestCase):
         print ("x = %s" % x)
         print ("f(x) = %s" % f (x))
         self.assertEqual (f (x), [42.])
+        self.assertEqual ("dummy function (not differentiable)", "%s" % f)
 
     def test_differentiable_function(self):
         f = Square ()
@@ -65,6 +66,7 @@ class TestFunctionPy(unittest.TestCase):
         self.assertEqual (f (x), x[0] * x[0])
         print ("df(x) = %s" % f.gradient (x, 0))
         self.assertEqual (f.gradient (x, 0), 2. * x[0])
+        self.assertEqual ("square function (differentiable function)", "%s" % f)
 
     def test_differentiable_function_jacobian(self):
         f = SquareJacobian ()
@@ -79,9 +81,11 @@ class TestFunctionPy(unittest.TestCase):
         self.assertRaises(NotImplementedError, lambda: f.gradient (x, 0))
         print ("Jac(f)(x) = %s" % f.jacobian (x))
         self.assertEqual (f.jacobian (x), 2. * x[0])
+        self.assertEqual ("square function (differentiable function)", "%s" % f)
 
     def test_problem(self):
         cost = Square()
+        self.assertEqual ("square function (differentiable function)", "%s" % cost)
         problem = roboptim.core.PyProblem (cost)
         print (problem)
 

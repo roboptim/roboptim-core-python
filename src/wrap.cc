@@ -273,6 +273,12 @@ namespace roboptim
 	  }
       }
 
+      std::ostream& DifferentiableFunction::print (std::ostream& o) const
+      {
+        // Force the call to the proper print method
+        return ::roboptim::DifferentiableFunction::print (o);
+      }
+
       void DifferentiableFunction::setGradientCallback (PyObject* callback)
       {
         if (gradientCallback_)
