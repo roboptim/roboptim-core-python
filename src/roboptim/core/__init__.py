@@ -51,7 +51,7 @@ class PyFunction(object):
         return
 
     def __call__(self, x):
-        result = numpy.array ([0.,])
+        result = numpy.zeros (self.outputSize ())
         compute (self._function, result, x)
         return result
 
@@ -94,7 +94,7 @@ class PyDifferentiableFunction(PyFunction):
         return
 
     def gradient (self, x, functionId):
-        g = numpy.array ([0.,])
+        g = numpy.zeros (self.inputSize ())
         gradient (self._function, g, x, functionId)
         return g
 
@@ -102,7 +102,7 @@ class PyDifferentiableFunction(PyFunction):
         return NotImplementedError
 
     def jacobian (self, x):
-        jac = numpy.array ([[0.,]])
+        jac = numpy.zeros ((self.outputSize (), self.inputSize ()))
         jacobian (self._function, jac, x)
         return jac
 
