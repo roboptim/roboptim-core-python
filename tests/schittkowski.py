@@ -48,6 +48,45 @@ class Problem6_G1 (roboptim.core.PyDifferentiableFunction):
         result[1] = 10.
 
 
+class Problem48_Cost (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 5, 1, "(x₀ - 1)² + (x₁ - x₂)² + (x₃ - x₄)²")
+
+    def impl_compute (self, result, x):
+        result[0] = (x[0] - 1.)**2 + (x[1] - x[2])**2 + (x[3] - x[4])**2
+
+    def impl_gradient (self, result, x, functionId):
+        result[0] = 2. * ( x[0] - 1.);
+        result[1] = 2. * ( x[1] - x[2]);
+        result[2] = 2. * (-x[1] + x[2]);
+        result[3] = 2. * ( x[3] - x[4]);
+        result[4] = 2. * (-x[3] + x[4]);
+
+
+class Problem48_G1 (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 5, 2, "x₀ + x₁ + x₂ + x₃ + x₄, x₂ - 2(x₃ + x₄)")
+
+    def impl_compute (self, result, x):
+        result[0] = x[0] + x[1] + x[2] + x[3] + x[4];
+        result[1] = x[2] - 2. * (x[3] + x[4]);
+
+    def impl_gradient (self, result, x, functionId):
+        raise NotImplementedError
+
+    def impl_jacobian (self, result, x):
+        result[0,0] = 1.;
+        result[0,1] = 1.;
+        result[0,2] = 1.;
+        result[0,3] = 1.;
+        result[0,4] = 1.;
+
+        result[1,2] =  1.;
+        result[1,3] = -2.;
+        result[1,4] = -2.;
+
 class TestFunctionPy(unittest.TestCase):
 
     def test_problem_1(self):
@@ -73,7 +112,7 @@ class TestFunctionPy(unittest.TestCase):
             numpy.testing.assert_almost_equal (r.value, [0.])
             numpy.testing.assert_almost_equal (r.x, [1., 1.])
         except Exception as e:
-            print ("Error: " + str(e))
+            print ("Error: %s" % e)
 
     def test_problem_2(self):
         """
@@ -101,7 +140,7 @@ class TestFunctionPy(unittest.TestCase):
             numpy.testing.assert_almost_equal (r.value, [0.0504261879])
             numpy.testing.assert_almost_equal (r.x, final_x)
         except Exception as e:
-            print ("Error: " + str(e))
+            print ("Error: %s" % e)
 
     def test_problem_6(self):
         """
@@ -129,7 +168,34 @@ class TestFunctionPy(unittest.TestCase):
             numpy.testing.assert_almost_equal (r.value, [0.])
             numpy.testing.assert_almost_equal (r.x, [1., 1.])
         except Exception as e:
-            print ("Error: " + str(e))
+            print ("Error: %s" % e)
+
+    def test_problem_48(self):
+        """
+        Schittkowski problem #48
+        """
+        cost = Problem48_Cost ()
+        problem = roboptim.core.PyProblem (cost)
+        problem.startingPoint = numpy.array([3., 5., -3., 2., -2.])
+
+        g1 = Problem48_G1 ()
+        problem.addConstraint (g1, numpy.array ([[5., 5.],[-3., -3.]]))
+
+        # Check starting value
+        numpy.testing.assert_almost_equal (cost (problem.startingPoint)[0], 84.)
+
+        # Let the test fail if the solver does not exist.
+        try:
+            solver = roboptim.core.PySolver ("ipopt", problem)
+            print (solver)
+            solver.solve ()
+            r = solver.minimum ()
+            print (r)
+            if not type(r) == roboptim.core.PySolverError:
+                numpy.testing.assert_almost_equal (r.value, [0.])
+                numpy.testing.assert_almost_equal (r.x, [1., 1., 1., 1., 1.])
+        except Exception as e:
+            print ("Error: %s" % e)
 
 if __name__ == '__main__':
     unittest.main ()

@@ -279,6 +279,11 @@ namespace roboptim
         return ::roboptim::DifferentiableFunction::print (o);
       }
 
+      const std::string& DifferentiableFunction::getName () const
+      {
+        return ::roboptim::DifferentiableFunction::getName ();
+      }
+
       void DifferentiableFunction::setGradientCallback (PyObject* callback)
       {
         if (gradientCallback_)
@@ -1581,14 +1586,15 @@ addConstraint (PyObject*, PyObject* args)
 {
   problem_t* problem = 0;
   Function* function = 0;
+  PyObject* py_bounds = 0;
   double min = 0.;
   double max = 0.;
 
   if (!PyArg_ParseTuple
-      (args, "O&O&(dd)",
+      (args, "O&O&O",
        &detail::problemConverter, &problem,
        &detail::functionConverter, &function,
-       &min, &max))
+       &py_bounds))
     return 0;
 
   if (!problem)
@@ -1613,13 +1619,66 @@ addConstraint (PyObject*, PyObject* args)
       return 0;
     }
 
+  if (!py_bounds)
+    {
+      PyErr_SetString (PyExc_TypeError, "3rd argument is invalid.");
+      return 0;
+    }
+
+  bool is_pair = (PyList_Check (py_bounds) && (PyList_Size (py_bounds) == 2));
+  bool is_np_array = (PyArray_Check (py_bounds) && (PyArray_NDIM (py_bounds) == 2));
+
+  if (!is_pair && !is_np_array)
+    {
+      PyErr_SetString (PyExc_TypeError,
+                       "3rd argument must be a (n x 2) NumPy array or a list of size 2.");
+      return 0;
+    }
+
   // If we just used a boost::shared_ptr, the constraint would be freed when the
   // problem disappears, so we use a custom deleter that keeps track of the
   // Python object's reference counter to prevent that.
   boost::shared_ptr<DifferentiableFunction> constraint
     = detail::to_shared_ptr<DifferentiableFunction>
     (dfunction, PyTuple_GetItem (args, 1));
-  problem->addConstraint (constraint, Function::makeInterval (min, max));
+
+
+  // Bounds = pair
+  if (is_pair && constraint->outputSize () == 1)
+    {
+      PyObject* py_min = PyList_GetItem (py_bounds, 0);
+      PyObject* py_max = PyList_GetItem (py_bounds, 1);
+
+      if (!py_min || !py_max || !PyFloat_Check (py_min) || !PyFloat_Check (py_max))
+	{
+	  PyErr_SetString (PyExc_TypeError,
+			   "bounds should be floats.");
+	  return 0;
+	}
+
+      problem->addConstraint (constraint,
+			      Function::makeInterval (PyFloat_AsDouble (py_min),
+						      PyFloat_AsDouble (py_max)));
+    }
+  // Bounds = vector of pairs
+  else if (is_np_array
+           && PyArray_DIMS (py_bounds)[0] == constraint->outputSize ()
+           && PyArray_DIMS (py_bounds)[1] == 2)
+    {
+      typedef problem_t::intervals_t intervals_t;
+      typedef problem_t::scales_t    scales_t;
+
+      scales_t scales (constraint->outputSize (), 1.);
+      intervals_t bounds (constraint->outputSize ());
+
+      problem->addConstraint (constraint, bounds, scales);
+    }
+  else
+    {
+      PyErr_SetString (PyExc_TypeError,
+                       "3rd argument's size must match the constraint's output size.");
+      return 0;
+    }
 
   Py_INCREF (Py_None);
   return Py_None;

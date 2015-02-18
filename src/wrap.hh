@@ -101,6 +101,8 @@ namespace roboptim
 
         virtual std::ostream& print (std::ostream& o) const;
 
+        const std::string& getName () const;
+
         void
 	setGradientCallback (PyObject* callback);
 
