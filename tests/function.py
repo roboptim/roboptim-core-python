@@ -34,6 +34,20 @@ class SquareJacobian (roboptim.core.PyDifferentiableFunction):
         result[0,0] = 2. * x[0]
 
 
+class DoubleSquare (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 1, 2, "double square function")
+
+    def impl_compute (self, result, x):
+        result[0] = x[0] * x[0]
+        result[1] = x[0] * x[0]
+
+    def impl_gradient (self, result, x, f_id):
+        result[0] = 2. * x[0]
+        result[1] = 2. * x[0]
+
+
 class TestFunctionPy(unittest.TestCase):
     def test_function(self):
         class F(roboptim.core.PyFunction):
@@ -104,6 +118,9 @@ class TestFunctionPy(unittest.TestCase):
 
         g1 = Square ()
         problem.addConstraint (g1, [-1., 10.,])
+
+        g2 = DoubleSquare ()
+        problem.addConstraint (g2, numpy.array ([[-1., 10.],[2., 3.]]))
 
         # Let the test fail if the solver does not exist.
         try:

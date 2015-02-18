@@ -1587,8 +1587,6 @@ addConstraint (PyObject*, PyObject* args)
   problem_t* problem = 0;
   Function* function = 0;
   PyObject* py_bounds = 0;
-  double min = 0.;
-  double max = 0.;
 
   if (!PyArg_ParseTuple
       (args, "O&O&O",
@@ -1670,6 +1668,13 @@ addConstraint (PyObject*, PyObject* args)
 
       scales_t scales (constraint->outputSize (), 1.);
       intervals_t bounds (constraint->outputSize ());
+
+      for (Function::size_type i = 0; i < constraint->outputSize (); ++i)
+	{
+	  // TODO: check array type
+	  bounds[i].first = * (double*) (PyArray_GETPTR2 (py_bounds, i, 0));
+	  bounds[i].second = * (double*) (PyArray_GETPTR2 (py_bounds, i, 1));
+	}
 
       problem->addConstraint (constraint, bounds, scales);
     }
