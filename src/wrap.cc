@@ -1739,7 +1739,7 @@ minimum (PyObject*, PyObject* args)
 	  PyCapsule_New (result_, ROBOPTIM_CORE_RESULT_CAPSULE_NAME,
 			 &detail::destructor<result_t>);
 	return Py_BuildValue
-	  ("(s,O)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
+	  ("(s,N)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
       }
     case solver_t::SOLVER_VALUE_WARNINGS:
       {
@@ -1749,7 +1749,7 @@ minimum (PyObject*, PyObject* args)
 	  PyCapsule_New (warn, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME,
 			 &detail::destructor<resultWithWarnings_t>);
 	return Py_BuildValue
-	  ("(s,O)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
+	  ("(s,N)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
       }
     case solver_t::SOLVER_ERROR:
       {
@@ -1759,7 +1759,7 @@ minimum (PyObject*, PyObject* args)
 	  PyCapsule_New (err, ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME,
 			 &detail::destructor<solverError_t>);
 	return Py_BuildValue
-	  ("(s,O)", ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME, errPy);
+	  ("(s,N)", ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME, errPy);
       }
     }
   Py_INCREF (Py_None);
@@ -1961,7 +1961,7 @@ addOptimizationLogger (PyObject*, PyObject* args)
     PyCapsule_New (logger, ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME,
                    &detail::destructor<logger_t>);
   return Py_BuildValue
-    ("(s,O)", ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME, loggerPy);
+    ("(s,N)", ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME, loggerPy);
 }
 
 
