@@ -2,6 +2,7 @@
 from __future__ import \
     print_function, unicode_literals, absolute_import, division
 
+import os
 import unittest
 import roboptim.core
 import numpy
@@ -266,19 +267,39 @@ class TestSolver(unittest.TestCase):
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
         callback = TestCallback (problem)
-        print (callback)
 
         # Let the test fail if the solver does not exist.
         try:
             solver = roboptim.core.Solver ("ipopt", problem)
-            roboptim.core.setIterationCallback (solver, callback)
+            roboptim.core.setIterationCallback (solver, callback._callback)
             self.assertTrue(roboptim.core.strSolver (solver))
             roboptim.core.solve (solver)
+        except Exception as e:
+            print ("%s" % e)
 
-            result = roboptim.core.minimum (solver)
-            print (result)
-        except:
-            print ("ipopt solver not available, passing...")
+    def test_solver_logger(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2 * x[0]
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        problem = roboptim.core.Problem (f)
+        roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
+
+        # Let the test fail if the solver does not exist.
+        try:
+            log_dir = "/tmp/roboptim-core-python/test"
+            solver = roboptim.core.Solver ("ipopt", problem)
+            logger = roboptim.core.addOptimizationLogger (solver, log_dir)
+            roboptim.core.solve (solver)
+            del logger
+            self.assertTrue(os.path.isdir(log_dir))
+        except Exception as e:
+            print ("%s" % e)
 
 if __name__ == '__main__':
     unittest.main()

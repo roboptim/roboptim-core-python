@@ -3,6 +3,7 @@ from __future__ import \
 
 import abc
 import inspect
+import os
 import numpy
 
 from .wrap import *
@@ -212,14 +213,22 @@ class PyProblem(object):
 
 
 class PySolver(object):
-    def __init__(self, solverName, problem):
+    def __init__(self, solverName, problem, log_dir = None):
         self._solver = Solver (solverName, problem._problem)
+        self._logDir = log_dir
 
     def __str__ (self):
         return strSolver (self._solver)
 
     def solve (self):
+        logger = None
+        if self._logDir is not None \
+           and os.access(os.path.dirname(self._logDir), os.W_OK):
+            logger = addOptimizationLogger (self._solver, self._logDir)
         solve (self._solver)
+
+        # Force deletion of logger to end logging
+        del logger
 
     def minimum (self):
         (objType, obj) = minimum (self._solver)

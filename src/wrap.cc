@@ -471,6 +471,17 @@ namespace detail
   }
 
   template <>
+  void destructor<logger_t> (PyObject* obj)
+  {
+    logger_t* ptr = static_cast<logger_t*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
   void destructor<result_t> (PyObject* obj)
   {
     result_t* ptr = static_cast<result_t*>
@@ -1930,6 +1941,31 @@ bindSolverCallback (PyObject*, PyObject* args)
 }
 
 static PyObject*
+addOptimizationLogger (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  const char* log_dir = 0;
+
+  if (!PyArg_ParseTuple
+      (args, "O&s:addOptimizationLogger",
+       &detail::factoryConverter, &factory,
+       &log_dir))
+    return 0;
+
+  // Note: logging is completed when the OptimizationLogger object is
+  // destroyed, so it should be created/destroyed in the same scope
+  // as solve().
+  logger_t* logger = new logger_t ((*factory) (), log_dir);
+
+  PyObject* loggerPy =
+    PyCapsule_New (logger, ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME,
+                   &detail::destructor<logger_t>);
+  return Py_BuildValue
+    ("(s,O)", ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME, loggerPy);
+}
+
+
+static PyObject*
 getStateParameter (const stateParameter_t& parameter)
 {
   PyObject* description = PyString_FromString (parameter.description.c_str ());
@@ -2574,6 +2610,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Set the solver parameters."},
     {"setIterationCallback", setIterationCallback, METH_VARARGS,
      "Set the solver's iteration callback."},
+    {"addOptimizationLogger", addOptimizationLogger, METH_VARARGS,
+     "Add an optimization logger."},
 
     // SolverState functions
     {"getSolverStateX", getSolverStateX, METH_VARARGS,

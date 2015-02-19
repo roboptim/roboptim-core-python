@@ -15,6 +15,7 @@
 #include <roboptim/core/solver.hh>
 #include <roboptim/core/twice-differentiable-function.hh>
 #include <roboptim/core/function-pool.hh>
+#include <roboptim/core/optimization-logger.hh>
 #include <roboptim/core/finite-difference-gradient.hh>
 
 
@@ -35,6 +36,8 @@ static const char* ROBOPTIM_CORE_SOLVER_CALLBACK_CAPSULE_NAME =
   "roboptim_core_solver_callback";
 static const char* ROBOPTIM_CORE_SOLVER_STATE_CAPSULE_NAME =
   "roboptim_core_solver_state";
+static const char* ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME =
+  "roboptim_core_optimization_logger";
 static const char* ROBOPTIM_CORE_RESULT_CAPSULE_NAME =
   "roboptim_core_result";
 static const char* ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME =
@@ -264,6 +267,7 @@ typedef roboptim::Solver<
 solver_t;
 
 typedef roboptim::SolverFactory<solver_t> factory_t;
+typedef roboptim::OptimizationLogger<solver_t> logger_t;
 
 typedef roboptim::Result result_t;
 typedef roboptim::ResultWithWarnings resultWithWarnings_t;

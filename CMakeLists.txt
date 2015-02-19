@@ -33,6 +33,7 @@ SET(CXX_DISABLE_WERROR 1) #FIXME: disable for now.
 SETUP_PROJECT()
 
 # Search for dependencies.
+SET(BOOST_COMPONENTS filesystem system thread date_time)
 SEARCH_FOR_BOOST()
 ADD_REQUIRED_DEPENDENCY("roboptim-core >= 0.5")
 
