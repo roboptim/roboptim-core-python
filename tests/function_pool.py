@@ -97,12 +97,34 @@ class TestFunctionPoolPy(unittest.TestCase):
         res = pool (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
-        pool.jacobian (x)
+        pool_jac = pool.jacobian (x)
         jac = np.zeros ((engine.n, 2*engine.n))
         for i in range(engine.n):
             for j in range(2):
                 jac[i,2*i+j] = 2. * x[2*i+j]
-        np.testing.assert_almost_equal (engine.jac, jac)
+        np.testing.assert_almost_equal (pool_jac, jac)
+
+    def test_pool_fd(self):
+        engine = Engine (3)
+        print(engine)
+        functions = [Square (engine, 0.), Square (engine, 1.), Square (engine, 2.)]
+        pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy FD pool")
+
+        fd_rule = roboptim.core.FiniteDifferenceRule.SIMPLE
+        fd_pool = roboptim.core.PyFiniteDifference (pool, rule = fd_rule)
+        print(fd_pool)
+
+        x = np.array([10., -5., 1., 2., -1., 1.])
+        res = fd_pool (x)
+        np.testing.assert_almost_equal (engine.data,
+                [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+
+        fd_pool_jac = fd_pool.jacobian (x)
+        jac = np.zeros ((engine.n, 2*engine.n))
+        for i in range(engine.n):
+            for j in range(2):
+                jac[i,2*i+j] = 2. * x[2*i+j]
+        np.testing.assert_almost_equal (fd_pool_jac, jac, 5)
 
 if __name__ == '__main__':
     unittest.main()

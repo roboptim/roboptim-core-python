@@ -124,6 +124,8 @@ class PyFunctionPool(PyDifferentiableFunction):
         self._function = FunctionPool (callback._function,
                                        [f._function for f in functions],
                                        self._formatName(name))
+        bindCompute (self._function,
+                     lambda result, x: self.impl_compute (result, x))
 
     def impl_compute (self, result, x):
         compute (self._function, result, x)
@@ -167,7 +169,6 @@ class PyFiniteDifference(PyDifferentiableFunction):
             self._fd = FivePointsFiniteDifferenceGradient (f._function, epsilon)
         else:
             raise ValueError("Unknown finite-difference rule.")
-
 
     def impl_compute (self, result, x):
         compute (self._fd, result, x)

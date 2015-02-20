@@ -8,6 +8,16 @@ import roboptim.core
 import numpy, numpy.testing
 import math
 
+class Square (roboptim.core.PyDifferentiableFunction):
+    def __init__ (self):
+        roboptim.core.PyDifferentiableFunction.__init__ \
+            (self, 1, 1, "square function")
+
+    def impl_compute (self, result, x):
+        result[0] = x[0] * x[0]
+
+    def impl_gradient (self, result, x, f_id):
+        raise NotImplementedError
 
 class Problem1_Cost (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
@@ -18,10 +28,21 @@ class Problem1_Cost (roboptim.core.PyDifferentiableFunction):
         result[0] = 100. * (x[1] - x[0]**2)**2 + (1. - x[0])**2
 
     def impl_gradient (self, result, x, functionId):
-        assert False
+        raise NotImplementedError
 
 
-class TestFunctionPy(unittest.TestCase):
+class TestFiniteDifferences(unittest.TestCase):
+
+    def test_jacobian(self):
+
+        fd_rule = roboptim.core.FiniteDifferenceRule.FIVE_POINTS
+        f = roboptim.core.PyFiniteDifference (Square (), rule = fd_rule)
+
+        x = numpy.array ([4.])
+        res = f (x)
+        numpy.testing.assert_almost_equal (res, [x[0] * x[0]], 5)
+        jac = f.jacobian (x)
+        numpy.testing.assert_almost_equal (jac, [[2. * x[0]]], 5)
 
     def test_problem_1(self):
         """
