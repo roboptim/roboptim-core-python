@@ -356,11 +356,11 @@ namespace roboptim
       FunctionPool::FunctionPool (const callback_ptr callback,
                                   const functionList_t& functions,
                                   const std::string& name)
-        : ::roboptim::DifferentiableFunction (pool_t::inputSize (functions),
-					      pool_t::outputSize (functions),
+        : ::roboptim::DifferentiableFunction (pool_t::listInputSize (functions),
+					      pool_t::listOutputSize (functions),
 					      name),
-	  pyFunction_t (pool_t::inputSize (functions),
-			pool_t::outputSize (functions),
+	  pyFunction_t (pool_t::listInputSize (functions),
+			pool_t::listOutputSize (functions),
 			name),
 	  pool_ (callback, functions, name)
       {
