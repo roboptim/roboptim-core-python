@@ -45,7 +45,6 @@ class DoubleSquare (roboptim.core.PyDifferentiableFunction):
 
     def impl_gradient (self, result, x, f_id):
         result[0] = 2. * x[0]
-        result[1] = 2. * x[0]
 
 
 class TestFunctionPy(unittest.TestCase):
@@ -132,12 +131,35 @@ class TestFunctionPy(unittest.TestCase):
             print (r)
 
             # Add a new dummy parameter
-            parameters = solver.parameters
-            parameters["dummy"] = tuple(("dummy description", "dummy value"))
+            parameters = dict()
+            parameters["dummy"] = tuple(("dummy description",
+                                         "dummy value"))
             solver.parameters = parameters
+
             print (solver)
-        except:
-            print ("ipopt solver not available, passing...")
+
+            test_parameters = list()
+            test_parameters.append (("foo_int", 42, "an integer"))
+            test_parameters.append (("foo_double", 12., "a scalar"))
+            test_parameters.append (("foo_str", "foo", "a string"))
+
+            for p in test_parameters:
+                solver.setParameter (p[0], p[1], p[2])
+
+            parameters = solver.parameters
+            print(parameters)
+            assert "dummy" in parameters \
+                    and parameters["dummy"][0] == "dummy description" \
+                    and parameters["dummy"][1] == "dummy value"
+
+            for p in test_parameters:
+                assert p[0] in parameters \
+                        and parameters[p[0]][0] == p[2] \
+                        and parameters[p[0]][1] == p[1]
+
+            print (solver)
+        except Exception as e:
+            print ("Error: %s" % e)
 
 if __name__ == '__main__':
     unittest.main()

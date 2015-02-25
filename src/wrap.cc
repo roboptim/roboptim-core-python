@@ -1882,6 +1882,56 @@ setSolverParameters (PyObject*, PyObject* args)
 }
 
 static PyObject*
+setSolverParameter (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  PyObject* key = 0;
+  PyObject* value = 0;
+  PyObject* desc = 0;
+
+  if (!PyArg_ParseTuple (args, "O&OOO",
+			 &detail::factoryConverter, &factory, &key, &value, &desc))
+    return 0;
+
+  if (!factory)
+    {
+      PyErr_SetString (PyExc_TypeError, "1st argument must be a solver.");
+      return 0;
+    }
+
+  solver_t& solver = (*factory) ();
+
+  parameter_t parameter;
+
+  std::string str_key = "";
+
+  if (PyBytes_Check (key))
+    {
+      str_key = PyBytes_AsString (key);
+    }
+  else if (PyUnicode_Check (key))
+    {
+      str_key = PyBytes_AsString (PyUnicode_AsASCIIString (key));
+    }
+
+  if (PyBytes_Check (desc))
+    {
+      parameter.description = PyBytes_AsString (desc);
+    }
+  else if (PyUnicode_Check (desc))
+    {
+      parameter.description = PyBytes_AsString (PyUnicode_AsASCIIString (desc));
+    }
+
+  parameter.value = detail::toParameterValue (value);
+
+  solver.parameters ()[str_key] = parameter;
+
+  Py_INCREF (Py_None);
+  return Py_None;
+}
+
+static PyObject*
 setIterationCallback (PyObject*, PyObject* args)
 {
   factory_t* factory = 0;
@@ -2608,6 +2658,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the solver parameters."},
     {"setSolverParameters", setSolverParameters, METH_VARARGS,
      "Set the solver parameters."},
+    {"setSolverParameter", setSolverParameter, METH_VARARGS,
+     "Set a solver parameter."},
     {"setIterationCallback", setIterationCallback, METH_VARARGS,
      "Set the solver's iteration callback."},
     {"addOptimizationLogger", addOptimizationLogger, METH_VARARGS,

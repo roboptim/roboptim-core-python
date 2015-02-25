@@ -245,6 +245,12 @@ class PySolver(object):
     def setIterationCallback (self, callback):
         setIterationCallback (self._solver, callback._callback)
 
+    def setParameter (self, key, value, description=""):
+        """
+        Set a single solver parameter.
+        """
+        setSolverParameter (self._solver, key, value, description)
+
     @property
     def parameters(self):
         return getSolverParameters (self._solver)
@@ -252,6 +258,7 @@ class PySolver(object):
     @parameters.setter
     def parameters(self, value):
         setSolverParameters (self._solver, value)
+
 
 class PySolverState(object):
     def __init__(self, state):
