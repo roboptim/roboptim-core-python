@@ -460,6 +460,17 @@ namespace detail
   }
 
   template <>
+  void destructor<rcp::Multiplexer<solver_t> > (PyObject* obj)
+  {
+    rcp::Multiplexer<solver_t>* ptr = static_cast<rcp::Multiplexer<solver_t>*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_CALLBACK_MULTIPLEXER_CAPSULE_NAME));
+    assert (ptr && "failed to retrieve pointer from capsule");
+    if (ptr)
+      delete ptr;
+  }
+
+  template <>
   void destructor<solverState_t> (PyObject* obj)
   {
     solverState_t* ptr = static_cast<solverState_t*>
@@ -646,6 +657,24 @@ namespace detail
 	PyErr_SetString
 	  (PyExc_TypeError,
 	   "Solver callback object expected but another type was passed");
+	return 0;
+      }
+    *address = ptr;
+    return 1;
+  }
+
+  int
+  multiplexerConverter (PyObject* obj, rcp::Multiplexer<solver_t>** address)
+  {
+    assert (address);
+    rcp::Multiplexer<solver_t>* ptr = static_cast<rcp::Multiplexer<solver_t>*>
+      (PyCapsule_GetPointer
+       (obj, ROBOPTIM_CORE_CALLBACK_MULTIPLEXER_CAPSULE_NAME));
+    if (!ptr)
+      {
+	PyErr_SetString
+	  (PyExc_TypeError,
+	   "Callback multiplexer object expected but another type was passed");
 	return 0;
       }
     *address = ptr;
@@ -1040,6 +1069,36 @@ createSolver (PyObject*, PyObject* args)
     PyCapsule_New (factory, ROBOPTIM_CORE_SOLVER_CAPSULE_NAME,
 		   &detail::destructor<factory_t>);
   return solverPy;
+}
+
+static PyObject*
+createMultiplexer (PyObject*, PyObject* args)
+{
+  factory_t* factory = 0;
+  if (!PyArg_ParseTuple (args, "O&",
+			 &detail::factoryConverter, &factory))
+    return 0;
+
+  ::roboptim::core::python::Multiplexer<solver_t>* multiplexer = 0;
+
+  try
+    {
+      boost::shared_ptr<factory_t> factory_ptr
+        = detail::to_shared_ptr<factory_t> (factory, PyTuple_GetItem (args, 0));
+      assert (factory_ptr);
+      multiplexer = new ::roboptim::core::python::Multiplexer<solver_t> (factory_ptr);
+    }
+  catch (...)
+    {
+      delete multiplexer;
+      Py_INCREF (Py_None);
+      return Py_None;
+    }
+
+  PyObject* multiplexerPy =
+    PyCapsule_New (multiplexer, ROBOPTIM_CORE_CALLBACK_MULTIPLEXER_CAPSULE_NAME,
+		   &detail::destructor< ::roboptim::core::python::Multiplexer<solver_t> >);
+  return multiplexerPy;
 }
 
 template <typename S>
@@ -1932,18 +1991,37 @@ setSolverParameter (PyObject*, PyObject* args)
 }
 
 static PyObject*
-setIterationCallback (PyObject*, PyObject* args)
+addIterationCallback (PyObject*, PyObject* args)
 {
-  factory_t* factory = 0;
+  ::roboptim::core::python::Multiplexer<solver_t>* multiplexer = 0;
   ::roboptim::core::python::SolverCallback<solver_t>* callback_wrapper = 0;
 
   if (!PyArg_ParseTuple
-      (args, "O&O&:setIterationCallback",
-       &detail::factoryConverter, &factory,
+      (args, "O&O&:addIterationCallback",
+       &detail::multiplexerConverter, &multiplexer,
        &detail::solverCallbackConverter, &callback_wrapper))
     return 0;
 
-  (*factory) ().setIterationCallback (callback_wrapper->callback ());
+  multiplexer->add (detail::to_shared_ptr< ::roboptim::core::python::SolverCallback<solver_t> >
+                    (callback_wrapper, PyTuple_GetItem (args, 1)));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject*
+removeIterationCallback (PyObject*, PyObject* args)
+{
+  ::roboptim::core::python::Multiplexer<solver_t>* multiplexer = 0;
+  size_t index = 0;
+
+  if (!PyArg_ParseTuple
+      (args, "O&i:removeIterationCallback",
+       &detail::multiplexerConverter, &multiplexer,
+       &index))
+    return 0;
+
+  multiplexer->remove (index);
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -1994,22 +2072,28 @@ static PyObject*
 addOptimizationLogger (PyObject*, PyObject* args)
 {
   factory_t* factory = 0;
+  ::roboptim::core::python::Multiplexer<solver_t>* multiplexer = 0;
   const char* log_dir = 0;
 
   if (!PyArg_ParseTuple
-      (args, "O&s:addOptimizationLogger",
+      (args, "O&O&s:addOptimizationLogger",
        &detail::factoryConverter, &factory,
+       &detail::multiplexerConverter, &multiplexer,
        &log_dir))
     return 0;
 
   // Note: logging is completed when the OptimizationLogger object is
   // destroyed, so it should be created/destroyed in the same scope
   // as solve().
-  logger_t* logger = new logger_t ((*factory) (), log_dir);
+  logger_t* logger = new logger_t ((*factory) (), log_dir, false);
 
   PyObject* loggerPy =
     PyCapsule_New (logger, ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME,
                    &detail::destructor<logger_t>);
+
+  // Register the callback to the multiplexer
+  multiplexer->add (detail::to_shared_ptr<logger_t> (logger, loggerPy));
+
   return Py_BuildValue
     ("(s,N)", ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME, loggerPy);
 }
@@ -2660,8 +2744,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Set the solver parameters."},
     {"setSolverParameter", setSolverParameter, METH_VARARGS,
      "Set a solver parameter."},
-    {"setIterationCallback", setIterationCallback, METH_VARARGS,
-     "Set the solver's iteration callback."},
+    {"addIterationCallback", addIterationCallback, METH_VARARGS,
+     "Add a solver iteration callback."},
+    {"removeIterationCallback", removeIterationCallback, METH_VARARGS,
+     "Remove a solver iteration callback."},
     {"addOptimizationLogger", addOptimizationLogger, METH_VARARGS,
      "Add an optimization logger."},
 
@@ -2686,6 +2772,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Set the solver state parameters."},
 
     // Solver callback
+    {"Multiplexer", createMultiplexer, METH_VARARGS,
+     "Create a solver callback multiplexer."},
     {"SolverCallback", createSolverCallback<solver_t>, METH_VARARGS,
      "Create a solver callback."},
     {"bindSolverCallback", bindSolverCallback, METH_VARARGS,

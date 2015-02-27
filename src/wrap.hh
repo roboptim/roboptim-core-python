@@ -1,6 +1,11 @@
 #ifndef ROBOPTIM_CORE_PYTHON_WRAP_HH
 # define ROBOPTIM_CORE_PYTHON_WRAP_HH
 
+#include <vector>
+
+#include <boost/variant.hpp>
+#include <boost/mpl/vector.hpp>
+
 #include <Python.h>
 
 #include <numpy/arrayobject.h>
@@ -18,6 +23,10 @@
 #include <roboptim/core/optimization-logger.hh>
 #include <roboptim/core/finite-difference-gradient.hh>
 
+#include <roboptim/core/callback/multiplexer.hh>
+
+#include <roboptim/core/detail/utility.hh>
+
 
 #define FORWARD_TYPEDEFS_(X)				\
   ROBOPTIM_DIFFERENTIABLE_FUNCTION_FWD_TYPEDEFS_ (X)
@@ -34,6 +43,8 @@ static const char* ROBOPTIM_CORE_SOLVER_CAPSULE_NAME =
   "roboptim_core_solver";
 static const char* ROBOPTIM_CORE_SOLVER_CALLBACK_CAPSULE_NAME =
   "roboptim_core_solver_callback";
+static const char* ROBOPTIM_CORE_CALLBACK_MULTIPLEXER_CAPSULE_NAME =
+  "roboptim_core_callback_multiplexer";
 static const char* ROBOPTIM_CORE_SOLVER_STATE_CAPSULE_NAME =
   "roboptim_core_solver_state";
 static const char* ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME =
@@ -214,6 +225,46 @@ namespace roboptim
         PyObject* pb_;
       };
 
+      /// \brief Iteration callback multiplexer.
+      /// \tparam S solver type.
+      template <typename S>
+      class Multiplexer
+      {
+      public:
+        /// \brief Solver type.
+        typedef S solver_t;
+
+        typedef roboptim::SolverFactory<solver_t> factory_t;
+        typedef boost::shared_ptr<factory_t> factory_ptr;
+
+        typedef SolverCallback<solver_t> callbackWrapper_t;
+        typedef roboptim::OptimizationLogger<solver_t> logger_t;
+
+        // TODO: do not treat logger separately
+        /// \brief Allowed types for callbacks:
+        ///   - Python callback
+        ///   - Optimization logger
+        typedef boost::mpl::vector<callbackWrapper_t, logger_t> callback_t;
+        typedef typename roboptim::detail::shared_ptr_variant<callback_t>::type callback_ptr;
+
+        typedef std::vector<callback_ptr> callbacks_t;
+
+        typedef roboptim::callback::Multiplexer<solver_t> multiplexer_t;
+        typedef typename multiplexer_t::callback_t callbackFunction_t;
+
+      public:
+        Multiplexer (factory_ptr factory);
+        virtual ~Multiplexer ();
+
+        void add (callback_ptr callback);
+        void remove (size_t i);
+
+      private:
+        factory_ptr   factory_;
+        multiplexer_t multiplexer_;
+        callbacks_t   callbacks_;
+      };
+
 
       class FunctionPool : virtual public ::roboptim::DifferentiableFunction,
 			   public ::roboptim::core::python::DifferentiableFunction
@@ -268,6 +319,7 @@ solver_t;
 
 typedef roboptim::SolverFactory<solver_t> factory_t;
 typedef roboptim::OptimizationLogger<solver_t> logger_t;
+typedef roboptim::callback::Multiplexer<solver_t> multiplexer_t;
 
 typedef roboptim::Result result_t;
 typedef roboptim::ResultWithWarnings resultWithWarnings_t;
@@ -295,6 +347,7 @@ namespace detail
   int problemConverter (PyObject* obj, problem_t** address);
   int factoryConverter (PyObject* obj, factory_t** address);
   int solverCallbackConverter (PyObject* obj, rcp::SolverCallback<solver_t>** address);
+  int multiplexerConverter (PyObject* obj, rcp::Multiplexer<solver_t>** address);
   int solverStateConverter (PyObject* obj, solverState_t** address);
   int resultConverter (PyObject* obj, result_t** address);
   int resultWithWarningsConverter (PyObject* obj, resultWithWarnings_t** address);

@@ -49,15 +49,30 @@ class TestSolverCallbackPy(unittest.TestCase):
         callback = IterCallback (problem)
 
         # Let the test fail if the solver does not exist.
-        try:
-            solver = roboptim.core.PySolver (nlp_solver, problem)
-            solver.setIterationCallback (callback)
-            print (solver)
-            solver.solve ()
-            r = solver.minimum ()
-            print (r)
-        except Exception as e:
-            print ("Error: %s" % e)
+        solver = roboptim.core.PySolver (nlp_solver, problem)
+        solver.addIterationCallback (callback)
+        print (solver)
+        solver.solve ()
+        r = solver.minimum ()
+        print (r)
+
+    def test_callback_multiplexer(self):
+        cost = roboptim.core.PyFiniteDifference (Square ())
+        problem = roboptim.core.PyProblem (cost)
+        problem.startingPoint = numpy.array([-4., 4.])
+        problem.argumentBounds = numpy.array([[float("-inf"), float("inf")],
+                                              [float("-inf"), float("inf")]])
+
+        callback = IterCallback (problem)
+
+        # Let the test fail if the solver does not exist.
+        solver = roboptim.core.PySolver (nlp_solver, problem,
+                                         log_dir = "/tmp/roboptim-core-python/test_multiplexer")
+        solver.addIterationCallback (callback)
+        print (solver)
+        solver.solve ()
+        r = solver.minimum ()
+        print (r)
 
 if __name__ == '__main__':
     unittest.main()

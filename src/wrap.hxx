@@ -9,6 +9,49 @@ namespace roboptim
   {
     namespace python
     {
+      namespace
+      {
+        template <typename S>
+        struct MultiplexerCallbackVisitor
+          : public boost::static_visitor<typename Multiplexer<S>::callbackFunction_t>
+        {
+          template <typename U>
+          typename Multiplexer<S>::callbackFunction_t operator () (const U& callback) const
+          {
+            return callback->callback ();
+          }
+        };
+      } // end of unnamed namespace
+
+      template <typename S>
+      Multiplexer<S>::Multiplexer (factory_ptr factory)
+      : factory_ (factory),
+        multiplexer_ ((*factory)()),
+        callbacks_ ()
+      {
+      }
+
+      template <typename S>
+      Multiplexer<S>::~Multiplexer ()
+      {
+        // DECREF is handled in the shared_ptr destructor
+      }
+
+      template <typename S>
+      void Multiplexer<S>::add (callback_ptr callback)
+      {
+        callbacks_.push_back (callback);
+        multiplexer_.callbacks ().push_back
+          (boost::apply_visitor (MultiplexerCallbackVisitor<S> (), callback));
+      }
+
+      template <typename S>
+      void Multiplexer<S>::remove (size_t i)
+      {
+        multiplexer_.callbacks ().erase (multiplexer_.callbacks ().begin () + i);
+        callbacks_.erase (callbacks_.begin () + i);
+      }
+
       template <typename S>
       SolverCallback<S>::SolverCallback (PyObject* pb)
 	: callback_ (0)

@@ -4,8 +4,19 @@ from __future__ import \
 
 import os
 import unittest
-import roboptim.core
+import shutil
 import numpy
+
+import roboptim.core
+
+
+class TestCallback(roboptim.core.PySolverCallback):
+    def __init__ (self, pb):
+        roboptim.core.PySolverCallback.__init__ (self, pb)
+
+    def callback (self, pb, state):
+        print("Dummy callback!")
+
 
 class TestFunction(unittest.TestCase):
     def test_create(self):
@@ -222,6 +233,7 @@ class TestProblem(unittest.TestCase):
 
 
 class TestSolver(unittest.TestCase):
+
     def test_solver(self):
         def compute(result, x):
             result[0] = x[0] * x[0]
@@ -236,28 +248,19 @@ class TestSolver(unittest.TestCase):
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
         # Let the test fail if the solver does not exist.
-        try:
-            solver = roboptim.core.Solver ("ipopt", problem)
-            self.assertTrue(roboptim.core.strSolver (solver))
-            roboptim.core.solve (solver)
+        solver = roboptim.core.Solver ("ipopt", problem)
+        self.assertTrue(roboptim.core.strSolver (solver))
+        roboptim.core.solve (solver)
 
-            result = roboptim.core.minimum (solver)
-            print (result)
-        except:
-            print ("ipopt solver not available, passing...")
+        (resType, result) = roboptim.core.minimum (solver)
+        if resType == "roboptim_core_result":
+            print(roboptim.core.PyResult (result))
 
     def test_solver_callback(self):
         def compute(result, x):
             result[0] = x[0] * x[0]
         def gradient(result, x, functionId):
             result[0] = 2 * x[0]
-
-        class TestCallback(roboptim.core.PySolverCallback):
-            def __init__ (self, pb):
-                roboptim.core.PySolverCallback.__init__ (self, pb)
-
-            def callback (self, pb, state):
-                print("Dummy callback!")
 
         f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
         roboptim.core.bindCompute(f, compute)
@@ -269,13 +272,11 @@ class TestSolver(unittest.TestCase):
         callback = TestCallback (problem)
 
         # Let the test fail if the solver does not exist.
-        try:
-            solver = roboptim.core.Solver ("ipopt", problem)
-            roboptim.core.setIterationCallback (solver, callback._callback)
-            self.assertTrue(roboptim.core.strSolver (solver))
-            roboptim.core.solve (solver)
-        except Exception as e:
-            print ("%s" % e)
+        solver = roboptim.core.Solver ("ipopt", problem)
+        multiplexer = roboptim.core.Multiplexer (solver)
+        roboptim.core.addIterationCallback (multiplexer, callback._callback)
+        self.assertTrue(roboptim.core.strSolver (solver))
+        roboptim.core.solve (solver)
 
     def test_solver_logger(self):
         def compute(result, x):
@@ -291,15 +292,44 @@ class TestSolver(unittest.TestCase):
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
         # Let the test fail if the solver does not exist.
-        try:
-            log_dir = "/tmp/roboptim-core-python/test"
-            solver = roboptim.core.Solver ("ipopt", problem)
-            logger = roboptim.core.addOptimizationLogger (solver, log_dir)
-            roboptim.core.solve (solver)
-            del logger
-            self.assertTrue(os.path.isdir(log_dir))
-        except Exception as e:
-            print ("%s" % e)
+        log_dir = "/tmp/roboptim-core-python/test_solver_logger"
+        if os.path.isdir(log_dir):
+            shutil.rmtree(log_dir)
+        solver = roboptim.core.Solver ("ipopt", problem)
+        multiplexer = roboptim.core.Multiplexer (solver)
+        logger = roboptim.core.addOptimizationLogger (solver, multiplexer, log_dir)
+        roboptim.core.solve (solver)
+        del logger
+        self.assertTrue(os.path.isdir(log_dir))
+        self.assertTrue(os.path.isdir(os.path.join(log_dir, 'iteration-0')))
+
+    def test_solver_callback_logger(self):
+        def compute(result, x):
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            result[0] = 2 * x[0]
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        problem = roboptim.core.Problem (f)
+        roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
+
+        callback = TestCallback (problem)
+
+        # Let the test fail if the solver does not exist.
+        log_dir = "/tmp/roboptim-core-python/test_solver_callback_logger"
+        if os.path.isdir(log_dir):
+            shutil.rmtree(log_dir)
+        solver = roboptim.core.Solver ("ipopt", problem)
+        multiplexer = roboptim.core.Multiplexer (solver)
+        roboptim.core.addIterationCallback (multiplexer, callback._callback)
+        logger = roboptim.core.addOptimizationLogger (solver, multiplexer, log_dir)
+        roboptim.core.solve (solver)
+        del logger
+        self.assertTrue(os.path.isdir(log_dir))
+        self.assertTrue(os.path.isdir(os.path.join(log_dir, 'iteration-0')))
 
 if __name__ == '__main__':
     unittest.main()

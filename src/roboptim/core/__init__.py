@@ -216,16 +216,22 @@ class PyProblem(object):
 class PySolver(object):
     def __init__(self, solverName, problem, log_dir = None):
         self._solver = Solver (solverName, problem._problem)
+        self._callbacks = list()
+        self._multiplexer = Multiplexer (self._solver)
         self._logDir = log_dir
 
     def __str__ (self):
         return strSolver (self._solver)
 
     def solve (self):
+        """
+        Solve the RobOptim problem. If a log directory was provided, the
+        optimization logger callback will be added to the callback multiplexer.
+        """
         logger = None
         if self._logDir is not None \
            and os.access(os.path.dirname(self._logDir), os.W_OK):
-            logger = addOptimizationLogger (self._solver, self._logDir)
+            logger = addOptimizationLogger (self._solver, self._multiplexer, self._logDir)
         solve (self._solver)
 
         # Force deletion of logger to end logging
@@ -242,8 +248,19 @@ class PySolver(object):
         else:
             raise TypeError ("unhandled case")
 
-    def setIterationCallback (self, callback):
-        setIterationCallback (self._solver, callback._callback)
+    def addIterationCallback (self, callback):
+        """
+        Add an iteration callback to the callback multiplexer.
+        """
+        self._callbacks.append (callback)
+        addIterationCallback (self._multiplexer, callback._callback)
+
+    def removeIterationCallback (self, index):
+        """
+        Remove an iteration callback from the callback multiplexer.
+        """
+        removeIterationCallback (self._multiplexer, index)
+        self._callbacks.pop (index)
 
     def setParameter (self, key, value, description=""):
         """
