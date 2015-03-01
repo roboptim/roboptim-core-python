@@ -132,6 +132,9 @@ class TestFunctionPy(unittest.TestCase):
         parameters = dict()
         parameters["dummy"] = tuple(("dummy description",
                                      "dummy value"))
+        assert "dummy" in parameters
+        assert parameters["dummy"][0] == "dummy description"
+        assert parameters["dummy"][1] == "dummy value"
         solver.parameters = parameters
 
         print (solver)
@@ -146,14 +149,20 @@ class TestFunctionPy(unittest.TestCase):
 
         parameters = solver.parameters
         print(parameters)
-        assert "dummy" in parameters \
-                and parameters["dummy"][0] == "dummy description" \
-                and parameters["dummy"][1] == "dummy value"
+        print(parameters["dummy"][0])
+        print(parameters["dummy"][1])
+        assert "dummy" in parameters
+        assert parameters["dummy"][0] == "dummy description".encode('utf-8')
+        assert parameters["dummy"][1] == "dummy value".encode('utf-8')
 
         for p in test_parameters:
-            assert p[0] in parameters \
-                    and parameters[p[0]][0] == p[2] \
-                    and parameters[p[0]][1] == p[1]
+            assert p[0] in parameters
+            if isinstance (p[1], (str)):
+                val = p[1].encode ('utf-8')
+            else:
+                val = p[1]
+            assert parameters[p[0]][0] == p[2].encode ('utf-8')
+            assert parameters[p[0]][1] == val
 
         print (solver)
 

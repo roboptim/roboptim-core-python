@@ -877,7 +877,10 @@ namespace detail
     // Unicode string
     else if (PyUnicode_Check (obj))
       {
-	return PyString_AsString (PyUnicode_AsUTF8String (obj));
+        PyObject* u = PyUnicode_AsUTF8String (obj);
+        parameter_t::parameterValues_t str = PyString_AsString (u);
+        Py_DECREF (u);
+        return str;
       }
     // Integer
     else if (PyInt_Check (obj))
