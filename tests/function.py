@@ -91,7 +91,7 @@ class TestFunctionPy(unittest.TestCase):
         print ("x = %s" % x)
         print ("f(x) = %s" % f (x))
         self.assertEqual (f (x), x[0] * x[0])
-        self.assertRaises(NotImplementedError, lambda: f.gradient (x, 0))
+        #self.assertRaises(NotImplementedError, lambda: f.gradient (x, 0))
         print ("Jac(f)(x) = %s" % f.jacobian (x))
         self.assertEqual (f.jacobian (x), 2. * x[0])
         self.assertEqual ("square function (differentiable function)", "%s" % f)
@@ -121,45 +121,42 @@ class TestFunctionPy(unittest.TestCase):
         g2 = DoubleSquare ()
         problem.addConstraint (g2, numpy.array ([[-1., 10.],[2., 3.]]))
 
-        # Let the test fail if the solver does not exist.
-        try:
-            solver = roboptim.core.PySolver ("ipopt", problem)
-            print (solver)
+        solver = roboptim.core.PySolver ("ipopt", problem)
+        print (solver)
 
-            solver.solve ()
-            r = solver.minimum ()
-            print (r)
+        solver.solve ()
+        r = solver.minimum ()
+        print (r)
 
-            # Add a new dummy parameter
-            parameters = dict()
-            parameters["dummy"] = tuple(("dummy description",
-                                         "dummy value"))
-            solver.parameters = parameters
+        # Add a new dummy parameter
+        parameters = dict()
+        parameters["dummy"] = tuple(("dummy description",
+                                     "dummy value"))
+        solver.parameters = parameters
 
-            print (solver)
+        print (solver)
 
-            test_parameters = list()
-            test_parameters.append (("foo_int", 42, "an integer"))
-            test_parameters.append (("foo_double", 12., "a scalar"))
-            test_parameters.append (("foo_str", "foo", "a string"))
+        test_parameters = list()
+        test_parameters.append (("foo_int", 42, "an integer"))
+        test_parameters.append (("foo_double", 12., "a scalar"))
+        test_parameters.append (("foo_str", "foo", "a string"))
 
-            for p in test_parameters:
-                solver.setParameter (p[0], p[1], p[2])
+        for p in test_parameters:
+            solver.setParameter (p[0], p[1], p[2])
 
-            parameters = solver.parameters
-            print(parameters)
-            assert "dummy" in parameters \
-                    and parameters["dummy"][0] == "dummy description" \
-                    and parameters["dummy"][1] == "dummy value"
+        parameters = solver.parameters
+        print(parameters)
+        assert "dummy" in parameters \
+                and parameters["dummy"][0] == "dummy description" \
+                and parameters["dummy"][1] == "dummy value"
 
-            for p in test_parameters:
-                assert p[0] in parameters \
-                        and parameters[p[0]][0] == p[2] \
-                        and parameters[p[0]][1] == p[1]
+        for p in test_parameters:
+            assert p[0] in parameters \
+                    and parameters[p[0]][0] == p[2] \
+                    and parameters[p[0]][1] == p[1]
 
-            print (solver)
-        except Exception as e:
-            print ("Error: %s" % e)
+        print (solver)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -144,8 +144,8 @@ class TestFunction(unittest.TestCase):
         x = [15., 10.]
 
         gradient = numpy.array([0., 0.])
-        self.assertRaises(NotImplementedError,
-                          lambda: roboptim.core.gradient (f, gradient, x, 0))
+        #self.assertRaises(NotImplementedError,
+                          #lambda: roboptim.core.gradient (f, gradient, x, 0))
 
         jacobian = numpy.zeros((outputSize, inputSize))
         roboptim.core.jacobian (f, jacobian, x)
