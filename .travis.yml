@@ -30,7 +30,7 @@ before_install:
 script:
   - export PYTHON_INCLUDE_DIR="`find /usr/include -name Python.h -printf '%h\n' | grep \"python${TRAVIS_PYTHON_VERSION}\"`"
   - export CMAKE_ADDITIONAL_OPTIONS="-DPython_ADDITIONAL_VERSIONS=${TRAVIS_PYTHON_VERSION} -DPythonLibs_FIND_VERSION=${TRAVIS_PYTHON_VERSION} -DPYTHON_EXECUTABLE=${VIRTUAL_ENV}/bin/python -DPYTHON_LIBRARY=${VIRTUAL_ENV}/lib/libpython${TRAVIS_PYTHON_VERSION}.so -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} -DPYTHON_PACKAGES_PATH=${VIRTUAL_ENV}/lib/python${TRAVIS_PYTHON_VERSION}/site-packages/"
-  - export LD_LIBRARY_PATH=`pkg-config --variable=plugindir roboptim-core`:$LD_LIBRARY_PATH;
+  - export LD_LIBRARY_PATH="/tmp/_travis/install/lib/roboptim-core/"
   - ./.travis/run build
 after_success: ./.travis/run after_success
 after_failure: ./.travis/run after_failure
