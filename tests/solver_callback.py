@@ -4,8 +4,10 @@ from __future__ import \
     print_function, unicode_literals, absolute_import, division
 
 import unittest
-import roboptim.core
+import os
 import numpy, numpy.testing
+
+import roboptim.core
 
 nlp_solver = "ipopt"
 
@@ -65,14 +67,15 @@ class TestSolverCallbackPy(unittest.TestCase):
 
         callback = IterCallback (problem)
 
-        # Let the test fail if the solver does not exist.
-        solver = roboptim.core.PySolver (nlp_solver, problem,
-                                         log_dir = "/tmp/roboptim-core-python/test_multiplexer")
+        log_dir = "/tmp/roboptim-core-python/test_multiplexer"
+        solver = roboptim.core.PySolver (nlp_solver, problem, log_dir = log_dir)
         solver.addIterationCallback (callback)
         print (solver)
         solver.solve ()
         r = solver.minimum ()
         print (r)
+        self.assertTrue(os.path.isdir(log_dir))
+        self.assertTrue(os.path.isdir(os.path.join(log_dir, 'iteration-0')))
 
 if __name__ == '__main__':
     unittest.main()
