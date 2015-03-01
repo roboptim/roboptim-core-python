@@ -1131,8 +1131,10 @@ createSolver (PyObject*, PyObject* args)
     {
       factory = new factory_t (pluginName, *problem);
     }
-  catch (...)
+  catch (const std::exception& e)
     {
+      PyErr_SetString (PyExc_RuntimeError, e.what ());
+
       delete factory;
       Py_INCREF (Py_None);
       return Py_None;
@@ -1161,8 +1163,10 @@ createMultiplexer (PyObject*, PyObject* args)
       assert (factory_ptr);
       multiplexer = new ::roboptim::core::python::Multiplexer<solver_t> (factory_ptr);
     }
-  catch (...)
+  catch (const std::exception& e)
     {
+      PyErr_SetString (PyExc_RuntimeError, e.what ());
+
       delete multiplexer;
       Py_INCREF (Py_None);
       return Py_None;
@@ -1190,8 +1194,10 @@ createSolverCallback (PyObject*, PyObject* args)
     {
       callback = new solverCallback_t (problem);
     }
-  catch (...)
+  catch (const std::exception& e)
     {
+      PyErr_SetString (PyExc_RuntimeError, e.what ());
+
       delete callback;
       Py_INCREF (Py_None);
       return Py_None;
