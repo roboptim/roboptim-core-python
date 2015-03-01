@@ -247,7 +247,6 @@ class TestSolver(unittest.TestCase):
         problem = roboptim.core.Problem (f)
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
-        # Let the test fail if the solver does not exist.
         solver = roboptim.core.Solver ("ipopt", problem)
         self.assertTrue(roboptim.core.strSolver (solver))
         roboptim.core.solve (solver)
@@ -271,7 +270,6 @@ class TestSolver(unittest.TestCase):
 
         callback = TestCallback (problem)
 
-        # Let the test fail if the solver does not exist.
         solver = roboptim.core.Solver ("ipopt", problem)
         multiplexer = roboptim.core.Multiplexer (solver)
         roboptim.core.addIterationCallback (multiplexer, callback._callback)
@@ -291,7 +289,6 @@ class TestSolver(unittest.TestCase):
         problem = roboptim.core.Problem (f)
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
-        # Let the test fail if the solver does not exist.
         log_dir = "/tmp/roboptim-core-python/test_solver_logger"
         if os.path.isdir(log_dir):
             shutil.rmtree(log_dir)
