@@ -708,7 +708,7 @@ namespace detail
       {
 	PyErr_SetString
 	  (PyExc_TypeError,
-	   "Problem object expected but another type was passed");
+	   "Solver object expected but another type was passed");
 	return 0;
       }
     *address = ptr;
