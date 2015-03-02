@@ -194,6 +194,13 @@ namespace roboptim
 	{
 	  fd_t::impl_gradient (gradient, argument, functionId);
 	}
+
+        virtual void impl_jacobian (jacobian_ref jacobian,
+                                    const_argument_ref argument)
+          const
+	{
+	  fd_t::impl_jacobian (jacobian, argument);
+	}
       };
 
 

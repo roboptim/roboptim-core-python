@@ -15,6 +15,12 @@ class Engine (roboptim.core.PyDifferentiableFunction):
         self.n = n
         self.data = np.zeros (n)
         self.jac = np.zeros ((n, 2*n))
+        self.compute_counter = 0
+        self.jacobian_counter = 0
+
+    def reset (self):
+        self.compute_counter = 0
+        self.jacobian_counter = 0
 
     def impl_compute (self, result, x):
         print("Engine: impl_compute")
@@ -33,11 +39,14 @@ class Engine (roboptim.core.PyDifferentiableFunction):
 
     def computeData (self, x):
         print("Engine: computing data")
+        self.compute_counter += 1
+        # For each square function
         for i in range(self.n):
             self.data[i] = x[2*i]**2 + x[2*i+1]**2
 
     def computeJacobian (self, x):
         print("Engine: computing Jacobian")
+        self.jacobian_counter += 1
         self.jac.fill (0.)
         # For each square function
         for i in range(self.n):
@@ -77,6 +86,9 @@ class TestFunctionPoolPy(unittest.TestCase):
         engine (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        assert engine.compute_counter == 1
+        assert engine.jacobian_counter == 0
+        engine.reset ()
 
         np.testing.assert_almost_equal (engine.jac, np.zeros ((engine.n, 2*engine.n)))
         engine.jacobian (x)
@@ -85,29 +97,45 @@ class TestFunctionPoolPy(unittest.TestCase):
             for j in range(2):
                 jac[i,2*i+j] = 2. * x[2*i+j]
         np.testing.assert_almost_equal (engine.jac, jac)
+        assert engine.compute_counter == 0
+        assert engine.jacobian_counter == 1
+        engine.reset ()
 
     def test_pool(self):
-        engine = Engine (3)
+        n = 3
+        engine = Engine (n)
         np.testing.assert_almost_equal (engine.data, np.zeros (engine.n))
-        functions = [Square (engine, 0.), Square (engine, 1.), Square (engine, 2.)]
+        functions = [Square (engine, float(i)) for i in range (n)]
         print(engine)
+
         pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy pool")
         print(pool)
+
         x = np.array([10., -5., 1., 2., -1., 1.])
+        assert len(x) == 2 * n
+
         res = pool (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        assert engine.compute_counter == 1
+        assert engine.jacobian_counter == 0
+        engine.reset ()
+
         pool_jac = pool.jacobian (x)
         jac = np.zeros ((engine.n, 2*engine.n))
         for i in range(engine.n):
             for j in range(2):
                 jac[i,2*i+j] = 2. * x[2*i+j]
         np.testing.assert_almost_equal (pool_jac, jac)
+        assert engine.compute_counter == 0
+        assert engine.jacobian_counter == 1
+        engine.reset ()
 
     def test_pool_fd(self):
-        engine = Engine (3)
+        n = 3
+        engine = Engine (n)
         print(engine)
-        functions = [Square (engine, 0.), Square (engine, 1.), Square (engine, 2.)]
+        functions = [Square (engine, float(i)) for i in range (n)]
         pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy FD pool")
 
         fd_rule = roboptim.core.FiniteDifferenceRule.SIMPLE
@@ -115,9 +143,14 @@ class TestFunctionPoolPy(unittest.TestCase):
         print(fd_pool)
 
         x = np.array([10., -5., 1., 2., -1., 1.])
+        assert len(x) == 2 * n
+
         res = fd_pool (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        assert engine.compute_counter == 1
+        assert engine.jacobian_counter == 0
+        engine.reset ()
 
         fd_pool_jac = fd_pool.jacobian (x)
         jac = np.zeros ((engine.n, 2*engine.n))
@@ -125,6 +158,10 @@ class TestFunctionPoolPy(unittest.TestCase):
             for j in range(2):
                 jac[i,2*i+j] = 2. * x[2*i+j]
         np.testing.assert_almost_equal (fd_pool_jac, jac, 5)
+        print(engine.compute_counter)
+        assert engine.compute_counter == 1 + len(x) # simple rule: (f(x+h)-f(x))/h
+        assert engine.jacobian_counter == 0
+        engine.reset ()
 
 if __name__ == '__main__':
     unittest.main()

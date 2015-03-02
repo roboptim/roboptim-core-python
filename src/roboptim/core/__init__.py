@@ -176,6 +176,9 @@ class PyFiniteDifference(PyDifferentiableFunction):
     def impl_gradient (self, result, x, functionId):
         gradient (self._fd, result, x, functionId)
 
+    def impl_jacobian (self, result, x):
+        jacobian (self._fd, result, x)
+
 
 class PyProblem(object):
     def __init__(self, cost):
