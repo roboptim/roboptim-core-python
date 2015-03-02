@@ -23,29 +23,24 @@ class Engine (roboptim.core.PyDifferentiableFunction):
         self.jacobian_counter = 0
 
     def impl_compute (self, result, x):
-        print("Engine: impl_compute")
         self.computeData(x)
 
     def impl_gradient (self, result, x):
         return NotImplementedError
 
     def impl_jacobian (self, result, x):
-        print("Engine: impl_jacobian")
         self.computeJacobian (x)
 
     def jacobian (self, x):
-        print("Engine: jacobian")
         self.computeJacobian (x)
 
     def computeData (self, x):
-        print("Engine: computing data")
         self.compute_counter += 1
         # For each square function
         for i in range(self.n):
             self.data[i] = x[2*i]**2 + x[2*i+1]**2
 
     def computeJacobian (self, x):
-        print("Engine: computing Jacobian")
         self.jacobian_counter += 1
         self.jac.fill (0.)
         # For each square function
@@ -68,11 +63,9 @@ class Square (roboptim.core.PyDifferentiableFunction):
         self.idx = idx
 
     def impl_compute (self, result, x):
-        print("Function %i: copying data" % self.idx)
         result[0] = self.engine.getData (self.idx)
 
     def impl_gradient (self, result, x, functionId):
-        print("Function %i: copying gradient" % self.idx)
         for i in range(2):
             result[2*self.idx + i] = self.engine.getJac (self.idx, 2*self.idx + i)
 
@@ -158,7 +151,6 @@ class TestFunctionPoolPy(unittest.TestCase):
             for j in range(2):
                 jac[i,2*i+j] = 2. * x[2*i+j]
         np.testing.assert_almost_equal (fd_pool_jac, jac, 5)
-        print(engine.compute_counter)
         assert engine.compute_counter == 1 + len(x) # simple rule: (f(x+h)-f(x))/h
         assert engine.jacobian_counter == 0
         engine.reset ()
