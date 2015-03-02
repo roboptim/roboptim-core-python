@@ -100,7 +100,7 @@ namespace roboptim
 	  }
       }
 
-      void Function::impl_compute (result_t& result, const argument_t& argument)
+      void Function::impl_compute (result_ref result, const_argument_ref argument)
 	const
       {
         if (!computeCallback_)
@@ -214,14 +214,14 @@ namespace roboptim
       }
 
       void DifferentiableFunction::impl_compute
-      (result_t& result, const argument_t& argument)
+      (result_ref result, const_argument_ref argument)
 	const
       {
         ::roboptim::core::python::Function::impl_compute (result, argument);
       }
 
-      void DifferentiableFunction::impl_gradient (gradient_t& gradient,
-                                                  const argument_t& argument,
+      void DifferentiableFunction::impl_gradient (gradient_ref gradient,
+                                                  const_argument_ref argument,
                                                   size_type functionId)
 	const
       {
@@ -278,8 +278,8 @@ namespace roboptim
 	Py_XDECREF(resultPy);
       }
 
-      void DifferentiableFunction::impl_jacobian (jacobian_t& jacobian,
-                                                  const argument_t& argument)
+      void DifferentiableFunction::impl_jacobian (jacobian_ref jacobian,
+                                                  const_argument_ref argument)
 	const
       {
 	// Jacobian callback not specified, we fallback on parent implementation
@@ -401,22 +401,22 @@ namespace roboptim
       }
 
       void TwiceDifferentiableFunction::impl_compute
-      (result_t& result, const argument_t& argument)
+      (result_ref result, const_argument_ref argument)
 	const
       {
         ::roboptim::core::python::Function::impl_compute (result, argument);
       }
 
       void TwiceDifferentiableFunction::impl_gradient
-      (gradient_t& gradient, const argument_t& argument, size_type functionId)
+      (gradient_ref gradient, const_argument_ref argument, size_type functionId)
 	const
       {
         ::roboptim::core::python::DifferentiableFunction::impl_gradient
           (gradient, argument, functionId);
       }
 
-      void TwiceDifferentiableFunction::impl_hessian (hessian_t& /*hessian*/,
-						      const argument_t& /*argument*/,
+      void TwiceDifferentiableFunction::impl_hessian (hessian_ref /*hessian*/,
+						      const_argument_ref /*argument*/,
 						      size_type /*functionId*/) const
       {
         //FIXME: implement this.
@@ -441,20 +441,20 @@ namespace roboptim
       {
       }
 
-      void FunctionPool::impl_compute (result_t& result, const argument_t& x) const
+      void FunctionPool::impl_compute (result_ref result, const_argument_ref x) const
       {
         pool_.impl_compute (result, x);
       }
 
-      void FunctionPool::impl_gradient (gradient_t& gradient,
-                                        const argument_t& x,
+      void FunctionPool::impl_gradient (gradient_ref gradient,
+                                        const_argument_ref x,
                                         size_type functionId) const
       {
         pool_.impl_gradient (gradient, x, functionId);
       }
 
-      void FunctionPool::impl_jacobian (jacobian_t& jacobian,
-                                        const argument_t& x) const
+      void FunctionPool::impl_jacobian (jacobian_ref jacobian,
+                                        const_argument_ref x) const
       {
         pool_.impl_jacobian (jacobian, x);
       }
@@ -923,7 +923,7 @@ namespace detail
       return PyBool_FromLong (b);
     }
 
-    PyObject* operator () (const roboptim::Function::vector_t& v) const
+    PyObject* operator () (roboptim::Function::const_vector_ref v) const
     {
       npy_intp n = static_cast<npy_intp> (v.size ());
 

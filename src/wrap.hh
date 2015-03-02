@@ -73,7 +73,7 @@ namespace roboptim
         virtual ~Function ();
 
         virtual void
-	impl_compute (result_t& result, const argument_t& argument) const;
+	impl_compute (result_ref result, const_argument_ref argument) const;
 
         void setComputeCallback (PyObject* callback);
 
@@ -100,16 +100,16 @@ namespace roboptim
 
         size_type outputSize () const;
 
-        virtual void impl_compute (result_t& result, const argument_t& argument)
+        virtual void impl_compute (result_ref result, const_argument_ref argument)
           const;
 
-        virtual void impl_gradient (gradient_t& gradient,
-                                    const argument_t& argument,
+        virtual void impl_gradient (gradient_ref gradient,
+                                    const_argument_ref argument,
                                     size_type functionId)
           const;
 
-        virtual void impl_jacobian (jacobian_t& jacobian,
-                                    const argument_t& argument)
+        virtual void impl_jacobian (jacobian_ref jacobian,
+                                    const_argument_ref argument)
           const;
 
 
@@ -141,18 +141,18 @@ namespace roboptim
 
         virtual ~TwiceDifferentiableFunction ();
 
-        virtual void impl_compute (result_t& result, const argument_t& argument)
+        virtual void impl_compute (result_ref result, const_argument_ref argument)
           const;
 
 
         virtual void impl_gradient
-	(gradient_t& gradient, const argument_t& argument, size_type functionId)
+	(gradient_ref gradient, const_argument_ref argument, size_type functionId)
           const;
 
 
         virtual void
 	impl_hessian (hessian_t& /*hessian*/,
-		      const argument_t& /*argument*/,
+		      const_argument_ref /*argument*/,
 		      size_type /*functionId*/) const;
 
       private:
@@ -187,8 +187,8 @@ namespace roboptim
 
         virtual ~FiniteDifferenceGradient () {}
 
-        virtual void impl_gradient (gradient_t& gradient,
-                                    const argument_t& argument,
+        virtual void impl_gradient (gradient_ref gradient,
+                                    const_argument_ref argument,
                                     size_type functionId)
           const
 	{
@@ -287,14 +287,14 @@ namespace roboptim
 
         virtual ~FunctionPool ();
 
-        virtual void impl_compute (result_t& result, const argument_t& x) const;
+        virtual void impl_compute (result_ref result, const_argument_ref x) const;
 
-        virtual void impl_gradient (gradient_t& gradient,
-                                    const argument_t& x,
+        virtual void impl_gradient (gradient_ref gradient,
+                                    const_argument_ref x,
                                     size_type functionId = 0) const;
 
-        virtual void impl_jacobian (jacobian_t& jacobian,
-                                    const argument_t& x) const;
+        virtual void impl_jacobian (jacobian_ref jacobian,
+                                    const_argument_ref x) const;
 
         virtual std::ostream& print (std::ostream&) const;
 
