@@ -5,6 +5,10 @@
 
 #include <boost/variant.hpp>
 #include <boost/mpl/vector.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/is_base_of.hpp>
+#include <boost/make_shared.hpp>
 
 #include <Python.h>
 
@@ -24,6 +28,8 @@
 #include <roboptim/core/finite-difference-gradient.hh>
 
 #include <roboptim/core/callback/multiplexer.hh>
+
+#include <roboptim/core/filter/cached-function.hh>
 
 #include <roboptim/core/detail/utility.hh>
 
@@ -201,6 +207,41 @@ namespace roboptim
 	{
 	  fd_t::impl_jacobian (jacobian, argument);
 	}
+      };
+
+      class CachedFunction
+	: virtual public ::roboptim::DifferentiableFunction,
+	  public ::roboptim::core::python::DifferentiableFunction
+      {
+      public:
+        typedef ::roboptim::DifferentiableFunction function_t;
+        typedef DifferentiableFunction pyFunction_t;
+
+        typedef ::roboptim::CachedFunction<function_t> cache_t;
+
+        FORWARD_TYPEDEFS_ (cache_t);
+
+        explicit CachedFunction (boost::shared_ptr<pyFunction_t> f, size_t cache_size);
+
+        virtual ~CachedFunction ();
+
+        virtual void impl_compute (result_ref result,
+                                   const_argument_ref argument)
+          const;
+
+        virtual void impl_gradient (gradient_ref gradient,
+                                    const_argument_ref argument,
+                                    size_type functionId)
+          const;
+
+        virtual void impl_jacobian (jacobian_ref jacobian,
+                                    const_argument_ref argument)
+          const;
+
+        virtual std::ostream& print (std::ostream& o) const;
+
+      private:
+	boost::shared_ptr<cache_t> cached_f_;
       };
 
 

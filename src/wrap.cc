@@ -437,6 +437,44 @@ namespace roboptim
       }
 
 
+      CachedFunction::CachedFunction (boost::shared_ptr<pyFunction_t> f, size_t cache_size)
+        : function_t (f->inputSize (), f->outputSize (), f->getName ()),
+	  pyFunction_t (f->inputSize (), f->outputSize (), f->getName ()),
+	  cached_f_ (boost::make_shared<cache_t> (f, cache_size))
+      {
+      }
+
+      CachedFunction::~CachedFunction ()
+      {
+      }
+
+      void CachedFunction::impl_compute (result_ref result,
+					 const_argument_ref argument)
+	const
+      {
+	(*cached_f_) (result, argument);
+      }
+
+      void CachedFunction::impl_gradient (gradient_ref gradient,
+					  const_argument_ref argument,
+					  size_type functionId)
+	const
+      {
+	cached_f_->gradient (gradient, argument, functionId);
+      }
+
+      void CachedFunction::impl_jacobian (jacobian_ref jacobian,
+					  const_argument_ref argument)
+	const
+      {
+	cached_f_->jacobian (jacobian, argument);
+      }
+
+      std::ostream& CachedFunction::print (std::ostream& o) const
+      {
+	return cached_f_->print (o);
+      }
+
       FunctionPool::~FunctionPool ()
       {
       }
@@ -472,6 +510,7 @@ using roboptim::core::python::DifferentiableFunction;
 using roboptim::core::python::TwiceDifferentiableFunction;
 using roboptim::core::python::FiniteDifferenceGradient;
 using roboptim::core::python::FunctionPool;
+using roboptim::core::python::CachedFunction;
 
 namespace detail
 {
@@ -1036,6 +1075,50 @@ createFDWrapper (PyObject*, PyObject* args)
     PyCapsule_New (fdFunction, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
 		   &detail::destructor<T>);
   return fdFunctionPy;
+}
+
+static PyObject*
+createCachedFunction (PyObject*, PyObject* args)
+{
+  typedef CachedFunction cachedDifferentiableFunction_t;
+
+  Function* function = 0;
+  size_t cache_size = 10;
+
+  if (!PyArg_ParseTuple(args, "O&|i", &detail::functionConverter, &function, &cache_size))
+    return 0;
+
+  if (!function)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve function object");
+      return 0;
+    }
+
+  PyObject* cachedFunctionPy = 0;
+
+  DifferentiableFunction* dfunction =
+    dynamic_cast<DifferentiableFunction*> (function);
+  if (!dfunction)
+    {
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Failed to retrieve differentiable function object");
+      return 0;
+    }
+
+  boost::shared_ptr<DifferentiableFunction> dfunction_ptr
+    = detail::to_shared_ptr<DifferentiableFunction> (dfunction, PyTuple_GetItem (args, 0));
+  assert (dfunction_ptr);
+
+  cachedDifferentiableFunction_t* cachedFunction
+    = new cachedDifferentiableFunction_t (dfunction_ptr, cache_size);
+
+  cachedFunctionPy = PyCapsule_New (cachedFunction, ROBOPTIM_CORE_FUNCTION_CAPSULE_NAME,
+				    &detail::destructor<cachedDifferentiableFunction_t>);
+
+  return cachedFunctionPy;
 }
 
 static PyObject*
@@ -2872,7 +2955,11 @@ static PyMethodDef RobOptimCoreMethods[] =
      METH_VARARGS, "Create a FiniteDifferenceGradient with forward difference."},
     {"FivePointsFiniteDifferenceGradient",
      createFDWrapper<FiniteDifferenceGradient<fivePointsPolicy_t> >,
-     METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-points rule."},
+     METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-point rule."},
+
+    // Filters
+    {"CachedFunction", createCachedFunction, METH_VARARGS,
+     "Create a cached function."},
 
     // Print functions
     {"strFunction", print<Function>, METH_VARARGS,

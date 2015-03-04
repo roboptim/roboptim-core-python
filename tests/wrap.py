@@ -178,6 +178,53 @@ class TestFunction(unittest.TestCase):
             roboptim.core.gradient (f, result, x, 0)
             numpy.testing.assert_almost_equal (result, result_fd, 4)
 
+    def test_cached_function(self):
+
+        def compute(result, x):
+            print("compute()")
+            result[0] = x[0] * x[0]
+        def gradient(result, x, functionId):
+            print("gradient()")
+            result[0] = 2 * x[0]
+
+        f = roboptim.core.DifferentiableFunction (1, 1, "x * x")
+        roboptim.core.bindCompute(f, compute)
+        roboptim.core.bindGradient(f, gradient)
+
+        # Cached function
+        cached = roboptim.core.CachedFunction (f, 10)
+
+        # Check computation with sequences.
+        x = [2.,]
+        result = numpy.array([0.,])
+        result2 = numpy.array([0.,])
+        gradient = numpy.array([0.,])
+        gradient2 = numpy.array([0.,])
+
+        roboptim.core.compute (cached, result, x)
+        roboptim.core.compute (cached, result2, x)
+        roboptim.core.gradient (cached, gradient, x, 0)
+        roboptim.core.gradient (cached, gradient2, x, 0)
+
+        self.assertEqual (x, [2.,])
+        self.assertEqual (result, [4.,])
+        self.assertEqual (result2, [4.,])
+        self.assertEqual (gradient, [4.,])
+        self.assertEqual (gradient2, [4.,])
+
+        x = [10.,]
+        roboptim.core.compute (cached, result, x)
+        roboptim.core.compute (cached, result2, x)
+        roboptim.core.gradient (cached, gradient, x, 0)
+        roboptim.core.gradient (cached, gradient2, x, 0)
+
+        self.assertEqual (x, [10.,])
+        self.assertEqual (result, [100.,])
+        self.assertEqual (result2, [100.,])
+        self.assertEqual (gradient, [20.,])
+        self.assertEqual (gradient2, [20.,])
+
+
     def test_function_pool(self):
         data = numpy.zeros(2)
 

@@ -180,6 +180,23 @@ class PyFiniteDifference(PyDifferentiableFunction):
         jacobian (self._fd, result, x)
 
 
+class PyCachedFunction(PyDifferentiableFunction):
+    def __init__ (self, f, size):
+        PyDifferentiableFunction.__init__ \
+            (self, f.inputSize (), f.outputSize (), \
+             self._decodeName (f.name ()))
+        self._cachedFunction = CachedFunction (f._function, size)
+
+    def impl_compute (self, result, x):
+        compute (self._cachedFunction, result, x)
+
+    def impl_gradient (self, result, x, functionId):
+        gradient (self._cachedFunction, result, x, functionId)
+
+    def impl_jacobian (self, result, x):
+        jacobian (self._cachedFunction, result, x)
+
+
 class PyProblem(object):
     def __init__(self, cost):
         self.cost = cost

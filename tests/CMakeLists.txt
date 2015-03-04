@@ -22,6 +22,10 @@ ADD_TEST(solver_callback
 ADD_TEST(finite_differences
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/finite_differences.py")
 
+# Check cached function support.
+ADD_TEST(cached_function
+  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/cached_function.py")
+
 # Check function pool support.
 ADD_TEST(function_pool
   "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/function_pool.py")
