@@ -121,14 +121,25 @@ class PyFunctionPool(PyDifferentiableFunction):
     def __init__ (self, callback, functions, name = ""):
         self._callback = callback
         self._functions = functions
-        self._function = FunctionPool (callback._function,
-                                       [f._function for f in functions],
-                                       self._formatName(name))
+        inSize = callback.inputSize ()
+        outSize = sum([f.outputSize() for f in functions])
+        self._function = DifferentiableFunction (inSize, outSize,
+                                                 self._formatName(name))
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
 
+        bindJacobian (self._function,
+                      lambda result, x: self.impl_jacobian (result, x))
+
     def impl_compute (self, result, x):
-        compute (self._function, result, x)
+        # Run callback
+        self._callback (x)
+        # Fill result
+        pos = 0
+        for f in self._functions:
+            size = f.outputSize ()
+            result[pos:pos+size] = f (x)
+            pos += size
 
     def impl_gradient (self, result, x, functionId):
         raise NotImplementedError
