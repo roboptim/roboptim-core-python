@@ -157,7 +157,7 @@ namespace roboptim
 
 
         virtual void
-	impl_hessian (hessian_t& /*hessian*/,
+	impl_hessian (hessian_ref /*hessian*/,
 		      const_argument_ref /*argument*/,
 		      size_type /*functionId*/) const;
 

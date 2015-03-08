@@ -122,7 +122,7 @@ namespace roboptim
         npy_intp outputSize = static_cast<npy_intp> (this->outputSize ());
 
         PyObject* resultNumpy =
-          PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, &result[0]);
+          PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, result.data ());
         if (!resultNumpy)
 	  {
 	    PyErr_SetString (PyExc_TypeError, "cannot convert result");
@@ -131,7 +131,7 @@ namespace roboptim
 
         PyObject* argNumpy =
           PyArray_SimpleNewFromData
-          (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+          (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
         if (!argNumpy)
 	  {
 	    PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -244,7 +244,7 @@ namespace roboptim
 	  (::roboptim::core::python::Function::inputSize ());
 
 	PyObject* gradientNumpy =
-	  PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, &gradient[0]);
+	  PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, gradient.data ());
 	if (!gradientNumpy)
           {
             PyErr_SetString (PyExc_TypeError, "cannot convert result");
@@ -253,7 +253,7 @@ namespace roboptim
 
 	PyObject* argNumpy =
 	  PyArray_SimpleNewFromData
-	  (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	  (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
 	if (!argNumpy)
           {
             PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -317,7 +317,7 @@ namespace roboptim
 
 	    PyObject* argNumpy =
 	      PyArray_SimpleNewFromData
-	      (1, &inputSize, NPY_DOUBLE, const_cast<double*> (&argument[0]));
+	      (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
 	    if (!argNumpy)
 	      {
 		PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -967,7 +967,7 @@ namespace detail
       npy_intp n = static_cast<npy_intp> (v.size ());
 
       return PyArray_SimpleNewFromData
-        (1, &n, NPY_DOUBLE, const_cast<double*> (&v[0]));
+        (1, &n, NPY_DOUBLE, const_cast<double*> (v.data ()));
     }
   };
 
