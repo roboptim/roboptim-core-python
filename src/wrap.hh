@@ -29,7 +29,7 @@
 
 #include <roboptim/core/callback/multiplexer.hh>
 
-#include <roboptim/core/filter/cached-function.hh>
+#include <roboptim/core/decorator/cached-function.hh>
 
 #include <roboptim/core/detail/utility.hh>
 

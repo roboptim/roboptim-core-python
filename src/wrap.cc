@@ -2957,7 +2957,7 @@ static PyMethodDef RobOptimCoreMethods[] =
      createFDWrapper<FiniteDifferenceGradient<fivePointsPolicy_t> >,
      METH_VARARGS, "Create a FiniteDifferenceGradient with the 5-point rule."},
 
-    // Filters
+    // Decorators
     {"CachedFunction", createCachedFunction, METH_VARARGS,
      "Create a cached function."},
 
