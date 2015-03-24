@@ -8,7 +8,7 @@ python:
 env:
   global:
   - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev coinor-libipopt-dev libblas-dev liblapack-dev libmumps-seq-dev gfortran"
-  - GIT_DEPENDENCIES="roboptim/roboptim-core:3.0 roboptim/roboptim-core-plugin-ipopt:3.0"
+  - GIT_DEPENDENCIES="roboptim/roboptim-core roboptim/roboptim-core-plugin-ipopt"
   - GH_USERNAME=thomas-moulard
   - GH_REPO=roboptim/roboptim-core-python
   - LCOV_IGNORE_RULES="*tests*"
@@ -19,7 +19,6 @@ notifications:
 branches:
   only:
     - master
-    - "3.0"
     - travis
 before_install:
   - sudo add-apt-repository ppa:fkrull/deadsnakes -y
