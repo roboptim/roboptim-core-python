@@ -1355,7 +1355,7 @@ compute (PyObject*, PyObject* args)
     (static_cast<double*>
      (PyArray_DATA (resultNumpy)), function->outputSize ());
 
-  resultEigen = (*function) (xEigen);
+  (*function) (resultEigen, xEigen);
 
   // Clean up.
   Py_DECREF (xNumpy);
