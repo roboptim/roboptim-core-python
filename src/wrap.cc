@@ -1323,6 +1323,15 @@ compute (PyObject*, PyObject* args)
   PyObject* resultNumpy =
     PyArray_FROM_OTF(result, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
+  if (!resultNumpy)
+    {
+      Py_XDECREF (resultNumpy);
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Result cannot be converted to NumPy object");
+      return 0;
+    }
+
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
@@ -1330,6 +1339,7 @@ compute (PyObject*, PyObject* args)
     PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!xNumpy)
     {
+      Py_XDECREF (xNumpy);
       PyErr_SetString
 	(PyExc_TypeError,
 	 "Argument cannot be converted to NumPy object");
@@ -1346,6 +1356,11 @@ compute (PyObject*, PyObject* args)
      (PyArray_DATA (resultNumpy)), function->outputSize ());
 
   resultEigen = (*function) (xEigen);
+
+  // Clean up.
+  Py_DECREF (xNumpy);
+  Py_DECREF (resultNumpy);
+
   if (PyErr_Occurred ())
     return 0;
 
@@ -1385,6 +1400,15 @@ gradient (PyObject*, PyObject* args)
   PyObject* gradientNumpy =
     PyArray_FROM_OTF(gradient, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
+  if (!gradientNumpy)
+    {
+      Py_XDECREF (gradientNumpy);
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Gradient cannot be converted to NumPy object");
+      return 0;
+    }
+
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
@@ -1392,6 +1416,7 @@ gradient (PyObject*, PyObject* args)
     PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!xNumpy)
     {
+      Py_XDECREF (xNumpy);
       PyErr_SetString
 	(PyExc_TypeError,
 	 "Argument cannot be converted to NumPy object");
@@ -1407,7 +1432,12 @@ gradient (PyObject*, PyObject* args)
     (static_cast<double*>
      (PyArray_DATA (gradientNumpy)), dfunction->gradientSize ());
 
-  gradientEigen = dfunction->gradient (xEigen, functionId);
+  dfunction->gradient (gradientEigen, xEigen, functionId);
+
+  // Clean up.
+  Py_DECREF (xNumpy);
+  Py_DECREF (gradientNumpy);
+
   if (PyErr_Occurred ())
     return 0;
 
@@ -1448,13 +1478,24 @@ jacobian (PyObject*, PyObject* args)
   PyObject* jacobianNumpy =
     PyArray_FROM_OTF(jacobian, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
+  if (!jacobianNumpy)
+    {
+      Py_XDECREF (jacobianNumpy);
+      PyErr_SetString
+	(PyExc_TypeError,
+	 "Jacobian cannot be converted to NumPy object");
+      return 0;
+    }
+
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
   PyObject* xNumpy =
     PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
+
   if (!xNumpy)
     {
+      Py_XDECREF (xNumpy);
       PyErr_SetString
 	(PyExc_TypeError,
 	 "Argument cannot be converted to NumPy object");
@@ -1471,6 +1512,11 @@ jacobian (PyObject*, PyObject* args)
      dfunction->jacobianSize ().first, dfunction->jacobianSize ().second);
 
   dfunction->jacobian (jacobianEigen, xEigen);
+
+  // Clean up.
+  Py_DECREF (xNumpy);
+  Py_DECREF (jacobianNumpy);
+
   if (PyErr_Occurred ())
     return 0;
 
@@ -1647,11 +1693,14 @@ setStartingPoint (PyObject*, PyObject* args)
       PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
       return 0;
     }
+
   PyObject* startingPointNumpy =
     PyArray_FROM_OTF
     (startingPoint, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
+
   if (!startingPointNumpy)
     {
+      Py_XDECREF (startingPointNumpy);
       PyErr_SetString (PyExc_TypeError,
 		       "failed to build numpy array from 2st argument");
       return 0;
@@ -1668,6 +1717,9 @@ setStartingPoint (PyObject*, PyObject* args)
      problem->function ().inputSize ());
 
   problem->startingPoint () = startingPointEigen;
+
+  // Clean up.
+  Py_DECREF (startingPointNumpy);
 
   Py_INCREF (Py_None);
   return Py_None;
@@ -1722,6 +1774,7 @@ setArgumentBounds (PyObject*, PyObject* args)
     (bounds, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!boundsNumpy)
     {
+      Py_XDECREF (boundsNumpy);
       PyErr_SetString (PyExc_TypeError,
 		       "failed to build numpy array from 2st argument");
       return 0;
@@ -1750,6 +1803,9 @@ setArgumentBounds (PyObject*, PyObject* args)
       problem->argumentBounds ()[i].second =
 	*static_cast<double*> (PyArray_GETPTR2 (bounds, i, 1));
     }
+
+  // Clean up.
+  Py_DECREF (boundsNumpy);
 
   Py_INCREF (Py_None);
   return Py_None;
@@ -1798,6 +1854,7 @@ setArgumentScales (PyObject*, PyObject* args)
     (scales, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!scalesNumpy)
     {
+      Py_XDECREF (scalesNumpy);
       PyErr_SetString (PyExc_TypeError,
 		       "failed to build numpy array from 2st argument");
       return 0;
@@ -1816,6 +1873,8 @@ setArgumentScales (PyObject*, PyObject* args)
   for (size_t i = 0; i < static_cast<size_t> (problem->function ().inputSize ()); ++i)
     problem->argumentScales ()[i] = scalesEigen[i];
 
+  // Clean up.
+  Py_DECREF (scalesNumpy);
 
   Py_INCREF (Py_None);
   return Py_None;
