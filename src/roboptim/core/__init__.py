@@ -27,6 +27,9 @@ class PyFunction(object):
     def name (self):
         return getName (self._function)
 
+    def order (self):
+        return getStorageOrder ()
+
     def _formatName(self,name):
         """
         This method is used to accept UTF-8 function names for both Python 2
@@ -52,7 +55,7 @@ class PyFunction(object):
         return
 
     def __call__(self, x):
-        result = numpy.zeros (self.outputSize ())
+        result = numpy.zeros (self.outputSize (), order=self.order())
         compute (self._function, result, x)
         return result
 
@@ -95,7 +98,7 @@ class PyDifferentiableFunction(PyFunction):
         return
 
     def gradient (self, x, functionId):
-        g = numpy.zeros (self.inputSize ())
+        g = numpy.zeros (self.inputSize (), order=self.order())
         gradient (self._function, g, x, functionId)
         return g
 
@@ -103,7 +106,7 @@ class PyDifferentiableFunction(PyFunction):
         return NotImplementedError
 
     def jacobian (self, x):
-        jac = numpy.zeros ((self.outputSize (), self.inputSize ()))
+        jac = numpy.zeros ((self.outputSize (), self.inputSize ()), order=self.order())
         jacobian (self._function, jac, x)
         return jac
 
@@ -159,7 +162,7 @@ class PyFunctionPool(PyDifferentiableFunction):
             row += size
 
     def jacobian (self, x):
-        jac = numpy.zeros ((self.outputSize (), self.inputSize ()))
+        jac = numpy.zeros ((self.outputSize (), self.inputSize ()), order=self.order())
         self.impl_jacobian (jac, x)
         return jac
 

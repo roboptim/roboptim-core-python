@@ -24,6 +24,8 @@ namespace roboptim
   {
     namespace python
     {
+      static const int NPY_STORAGE_ORDER = (::roboptim::StorageOrder == Eigen::RowMajor)? NPY_C_CONTIGUOUS:NPY_F_CONTIGUOUS;
+
       namespace
       {
         std::string toString (PyObject* obj)
@@ -298,7 +300,8 @@ namespace roboptim
 		return;
 	      }
 
-	    // TODO: check storage order (NumPy excepts C-style, but Eigen uses RowMajor as default)
+	    // TODO: check storage order (NumPy expects C-style here, but Eigen uses ColMajor as default)
+	    // Moreover, RobOptim users can change the storage order.
 	    npy_intp inputSize =
 	      static_cast<npy_intp> (::roboptim::core::python::Function::inputSize ());
 	    npy_intp outputSize =
@@ -1173,6 +1176,13 @@ getName (PyObject*, PyObject* args)
 }
 
 static PyObject*
+getStorageOrder (PyObject*, PyObject* args)
+{
+  char storage_order = (::roboptim::core::python::NPY_STORAGE_ORDER == NPY_F_CONTIGUOUS)? 'F':'C';
+  return Py_BuildValue("c", storage_order);
+}
+
+static PyObject*
 createProblem (PyObject*, PyObject* args)
 {
   Function* costFunction = 0;
@@ -1311,13 +1321,13 @@ compute (PyObject*, PyObject* args)
     }
 
   PyObject* resultNumpy =
-    PyArray_FROM_OTF(result, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(result, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
   PyObject* xNumpy =
-    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!xNumpy)
     {
       PyErr_SetString
@@ -1373,13 +1383,13 @@ gradient (PyObject*, PyObject* args)
     }
 
   PyObject* gradientNumpy =
-    PyArray_FROM_OTF(gradient, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(gradient, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
   PyObject* xNumpy =
-    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!xNumpy)
     {
       PyErr_SetString
@@ -1393,7 +1403,7 @@ gradient (PyObject*, PyObject* args)
     (static_cast<double*> (PyArray_DATA (xNumpy)), function->inputSize ());
 
   // Directly map Eigen result to the numpy array data.
-  Eigen::Map<Function::result_t> gradientEigen
+  Eigen::Map<DifferentiableFunction::gradient_t> gradientEigen
     (static_cast<double*>
      (PyArray_DATA (gradientNumpy)), dfunction->gradientSize ());
 
@@ -1436,13 +1446,13 @@ jacobian (PyObject*, PyObject* args)
     }
 
   PyObject* jacobianNumpy =
-    PyArray_FROM_OTF(jacobian, NPY_DOUBLE, NPY_OUT_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(jacobian, NPY_DOUBLE, NPY_OUT_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
 
   // Try to build an array type from x.
   // All types providing a sequence interface are compatible.
   // Tuples, sequences and Numpy types for instance.
   PyObject* xNumpy =
-    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    PyArray_FROM_OTF(x, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!xNumpy)
     {
       PyErr_SetString
@@ -1460,8 +1470,7 @@ jacobian (PyObject*, PyObject* args)
     (static_cast<double*> (PyArray_DATA (jacobianNumpy)),
      dfunction->jacobianSize ().first, dfunction->jacobianSize ().second);
 
-  // Warning: this works as long as RobOptim uses row-major storage.
-  jacobianEigen = dfunction->jacobian (xEigen);
+  dfunction->jacobian (jacobianEigen, xEigen);
   if (PyErr_Occurred ())
     return 0;
 
@@ -1611,7 +1620,7 @@ getStartingPoint (PyObject*, PyObject* args)
     static_cast<npy_intp> (problem->function ().inputSize ());
 
   PyObject* startingPoint = PyArray_SimpleNew(1, &inputSize, NPY_DOUBLE);
-  Eigen::Map<Function::vector_t> startingPointEigen
+  Eigen::Map<Function::argument_t> startingPointEigen
     (static_cast<double*>
      (PyArray_DATA (startingPoint)), problem->function ().inputSize ());
 
@@ -1640,7 +1649,7 @@ setStartingPoint (PyObject*, PyObject* args)
     }
   PyObject* startingPointNumpy =
     PyArray_FROM_OTF
-    (startingPoint, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    (startingPoint, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!startingPointNumpy)
     {
       PyErr_SetString (PyExc_TypeError,
@@ -1710,7 +1719,7 @@ setArgumentBounds (PyObject*, PyObject* args)
     }
   PyObject* boundsNumpy =
     PyArray_FROM_OTF
-    (bounds, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    (bounds, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!boundsNumpy)
     {
       PyErr_SetString (PyExc_TypeError,
@@ -1730,7 +1739,7 @@ setArgumentBounds (PyObject*, PyObject* args)
       return 0;
     }
 
-  Eigen::Map<Function::argument_t> boundsEigen
+  Eigen::Map<Function::vector_t> boundsEigen
     (static_cast<double*> (PyArray_DATA (boundsNumpy)),
      problem->function ().inputSize ());
 
@@ -1786,7 +1795,7 @@ setArgumentScales (PyObject*, PyObject* args)
     }
   PyObject* scalesNumpy =
     PyArray_FROM_OTF
-    (scales, NPY_DOUBLE, NPY_IN_ARRAY & NPY_C_CONTIGUOUS);
+    (scales, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
   if (!scalesNumpy)
     {
       PyErr_SetString (PyExc_TypeError,
@@ -1800,7 +1809,7 @@ setArgumentScales (PyObject*, PyObject* args)
       return 0;
     }
 
-  Eigen::Map<Function::argument_t> scalesEigen
+  Eigen::Map<Function::vector_t> scalesEigen
     (static_cast<double*> (PyArray_DATA (scalesNumpy)),
      problem->function ().inputSize ());
 
@@ -2426,7 +2435,7 @@ setSolverStateX (PyObject*, PyObject* args)
       return 0;
     }
 
-  Eigen::Map<Function::vector_t> vecEigen
+  Eigen::Map<Function::argument_t> vecEigen
     (static_cast<double*> (PyArray_DATA (py_parameters)),
      PyArray_DIMS (py_parameters)[0]);
   state->x () = vecEigen;
@@ -2854,6 +2863,8 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Return function output size."},
     {"getName", getName, METH_VARARGS,
      "Return function name."},
+    {"getStorageOrder", getStorageOrder, METH_VARARGS,
+     "Return the storage order ('F' or 'C')."},
 
     {"DifferentiableFunction", createFunction<DifferentiableFunction>,
      METH_VARARGS, "Create a DifferentiableFunction object."},
