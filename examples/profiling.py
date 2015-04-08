@@ -16,7 +16,7 @@ class Engine (roboptim.core.PyDifferentiableFunction):
             (self, 2*n, 1, "Dummy engine")
         self.n = n
         self.res = 0
-        self.jac = numpy.zeros ((1, 2*n))
+        self.jac = numpy.zeros ((2*n, 2*n))
 
     def impl_compute (self, result, x):
         self.computeData(x)
@@ -34,7 +34,7 @@ class Engine (roboptim.core.PyDifferentiableFunction):
         self.res = x
 
     def computeJacobian (self, x):
-        self.jac.fill (1.)
+        numpy.fill_diagonal (self.jac, 1.)
 
 
 class Problem_Cost (roboptim.core.PyDifferentiableFunction):
@@ -71,7 +71,7 @@ class Problem_Constraint (roboptim.core.PyDifferentiableFunction):
         raise NotImplementedError
 
     def impl_jacobian (self, result, x):
-        numpy.copyto(result, self.engine.jac)
+        result = self.engine.jac
 
 
 """
@@ -80,8 +80,11 @@ Schittkowski problem #1 duplicated n times.
 parser = argparse.ArgumentParser(description='Run a benchmark scaling with n.')
 parser.add_argument('n', metavar='n', type=int,
                     help='Number of variables/constraints = 2n')
+parser.add_argument('--fd', dest='fd', action='store_true',
+                   help='whether to use forward differences for the constraints')
 args = parser.parse_args()
 n = args.n
+use_fd = args.fd
 cost = Problem_Cost (n)
 
 starting_point = numpy.array([-2., 1.] * n).flatten()
@@ -95,11 +98,16 @@ problem.argumentBounds = bounds
 engine = Engine (n)
 cstr = Problem_Constraint (engine)
 functions = [cstr]
-pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy FD pool")
+pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy pool")
 fd_rule = roboptim.core.FiniteDifferenceRule.SIMPLE
 fd_pool = roboptim.core.PyFiniteDifference (pool, rule = fd_rule)
 
-problem.addConstraint (fd_pool, numpy.tile ([[0, float("inf")]], (2*n,1)))
+if use_fd:
+    cstr = fd_pool
+else:
+    cstr = pool
+
+problem.addConstraint (cstr, numpy.tile ([[0, float("inf")]], (2*n,1)))
 
 # Check starting value
 numpy.testing.assert_almost_equal (cost (problem.startingPoint), 909 * n)
@@ -108,7 +116,6 @@ solver = roboptim.core.PySolver ("ipopt", problem)
 solver.setParameter("ipopt.mu_strategy", "adaptive")
 solver.setParameter("ipopt.tol", 1e-6)
 solver.setParameter("ipopt.output_file", "ipopt.log")
-solver.setParameter("ipopt.print_user_options", "yes")
 
 print (solver)
 solver.solve ()
