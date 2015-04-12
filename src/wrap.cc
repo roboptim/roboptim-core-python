@@ -1229,8 +1229,7 @@ createSolver (PyObject*, PyObject* args)
       PyErr_SetString (PyExc_RuntimeError, e.what ());
 
       delete factory;
-      Py_INCREF (Py_None);
-      return Py_None;
+      return NULL;
     }
 
   PyObject* solverPy =
@@ -1261,8 +1260,7 @@ createMultiplexer (PyObject*, PyObject* args)
       PyErr_SetString (PyExc_RuntimeError, e.what ());
 
       delete multiplexer;
-      Py_INCREF (Py_None);
-      return Py_None;
+      return NULL;
     }
 
   PyObject* multiplexerPy =
@@ -1292,8 +1290,7 @@ createSolverCallback (PyObject*, PyObject* args)
       PyErr_SetString (PyExc_RuntimeError, e.what ());
 
       delete callback;
-      Py_INCREF (Py_None);
-      return Py_None;
+      return NULL;
     }
 
   PyObject* callbackPy =
