@@ -6,6 +6,14 @@ import inspect
 import os
 import numpy
 
+# Here, we use RTLD_GLOBAL to link with roboptim-core since the Python module
+# is a plugin, itself calling RobOptim solver plugins. Without this, the Python
+# plugin cannot access local symbols of roboptim-core. This is not ideal, but
+# at least plugins do not need to link with roboptim-core themselves. A better
+# solution may be implemented later on.
+from ctypes import CDLL, RTLD_GLOBAL
+CDLL("libroboptim-core.so", RTLD_GLOBAL)
+
 from .wrap import *
 
 
