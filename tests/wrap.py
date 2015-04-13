@@ -294,6 +294,14 @@ class TestSolver(unittest.TestCase):
         problem = roboptim.core.Problem (f)
         roboptim.core.setStartingPoint(problem, numpy.array([-2.]))
 
+        # Solver plugin does not exist
+        self.assertRaises(RuntimeError,
+                          roboptim.core.Solver, "none", problem)
+
+        # Constraint list type mismatch
+        self.assertRaises(RuntimeError,
+                          roboptim.core.Solver, "dummy", problem)
+
         solver = roboptim.core.Solver ("ipopt", problem)
         self.assertTrue(roboptim.core.strSolver (solver))
         roboptim.core.solve (solver)
