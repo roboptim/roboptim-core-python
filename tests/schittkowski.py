@@ -142,6 +142,7 @@ class TestFunctionPy(unittest.TestCase):
         self.assertEqual (cost (problem.startingPoint), 909)
 
         solver = roboptim.core.PySolver ("ipopt", problem)
+        solver.setParameter("ipopt.output_file", "problem_1.log")
         print (solver)
         solver.solve ()
         r = solver.minimum ()
@@ -163,6 +164,7 @@ class TestFunctionPy(unittest.TestCase):
         self.assertEqual (cost (problem.startingPoint), 909)
 
         solver = roboptim.core.PySolver ("ipopt", problem)
+        solver.setParameter("ipopt.output_file", "problem_2.log")
         print (solver)
         solver.solve ()
         r = solver.minimum ()
@@ -190,6 +192,7 @@ class TestFunctionPy(unittest.TestCase):
         numpy.testing.assert_almost_equal (cost (problem.startingPoint)[0], 4.84)
 
         solver = roboptim.core.PySolver ("ipopt", problem)
+        solver.setParameter("ipopt.output_file", "problem_6.log")
         print (solver)
         solver.solve ()
         r = solver.minimum ()
@@ -216,6 +219,7 @@ class TestFunctionPy(unittest.TestCase):
         numpy.testing.assert_almost_equal (cost (problem.startingPoint)[0], -1.)
 
         solver = roboptim.core.PySolver ("ipopt", problem)
+        solver.setParameter("ipopt.output_file", "problem_8.log")
         print (solver)
         solver.solve ()
         r = solver.minimum ()
@@ -240,6 +244,7 @@ class TestFunctionPy(unittest.TestCase):
 
         # Let the test fail if the solver does not exist.
         solver = roboptim.core.PySolver ("ipopt", problem)
+        solver.setParameter("ipopt.output_file", "problem_48.log")
         print (solver)
         solver.solve ()
         r = solver.minimum ()
