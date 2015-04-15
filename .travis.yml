@@ -35,7 +35,7 @@ script:
 after_success:
   # Print Ipopt logs even after success
   - . .travis/common.sh
-  - find $build_dir/tests -name "*.log" | xargs -i sh -c "echo \"####### Printing content of {} ######\"; cat {}"
+  - "find $build_dir/tests -name \"*.log\" | xargs -i sh -c \"echo '####### Printing content of {} ######'; cat {}\""
   - ./.travis/run after_success
 after_failure: ./.travis/run after_failure
 matrix:
