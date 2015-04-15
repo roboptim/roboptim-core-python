@@ -147,7 +147,7 @@ class TestFunction(unittest.TestCase):
         #self.assertRaises(NotImplementedError,
                           #lambda: roboptim.core.gradient (f, gradient, x, 0))
 
-        jacobian = numpy.zeros((outputSize, inputSize))
+        jacobian = numpy.zeros((outputSize, inputSize), order=roboptim.core.getStorageOrder())
         roboptim.core.jacobian (f, jacobian, x)
         expected_jacobian = numpy.array([[1., 1.], [1., -1.], [10., 15.]])
         numpy.testing.assert_almost_equal (jacobian, expected_jacobian)

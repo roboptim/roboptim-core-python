@@ -248,9 +248,8 @@ class TestFunctionPy(unittest.TestCase):
         solver.solve ()
         r = solver.minimum ()
         print (r)
-        if not type(r) == roboptim.core.PySolverError:
-            numpy.testing.assert_almost_equal (r.value, [0.])
-            numpy.testing.assert_almost_equal (r.x, [1., 1., 1., 1., 1.])
+        numpy.testing.assert_almost_equal (r.value, [0.])
+        numpy.testing.assert_almost_equal (r.x, [1., 1., 1., 1., 1.])
 
 if __name__ == '__main__':
     unittest.main ()

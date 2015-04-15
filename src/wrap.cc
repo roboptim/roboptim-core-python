@@ -300,18 +300,28 @@ namespace roboptim
 		return;
 	      }
 
-	    // TODO: check storage order (NumPy expects C-style here, but Eigen uses ColMajor as default)
-	    // Moreover, RobOptim users can change the storage order.
 	    npy_intp inputSize =
 	      static_cast<npy_intp> (::roboptim::core::python::Function::inputSize ());
 	    npy_intp outputSize =
 	      static_cast<npy_intp> (::roboptim::core::python::Function::outputSize ());
 
+	    // Check storage order and map memory accordingly (PyArray_SimpleNewFromData
+	    // expects a row-major matrix).
+	    PyObject* jacobianNumpy = NULL;
 	    npy_intp sizes[2] = {outputSize, inputSize};
 
-	    PyObject* jacobianNumpy =
-	      PyArray_SimpleNewFromData (2, &sizes[0], NPY_DOUBLE,
-					 jacobian.data ());
+	    if (::roboptim::StorageOrder == Eigen::RowMajor)
+	      {
+		jacobianNumpy = PyArray_SimpleNewFromData (2, &sizes[0], NPY_DOUBLE,
+							   jacobian.data ());
+	      }
+	    else
+	      {
+		jacobianNumpy = PyArray_NewFromDescr (&PyArray_Type, PyArray_DescrFromType (PyArray_DOUBLE),
+						      2, sizes, NULL, jacobian.data (),
+						      NPY_WRITEABLE | NPY_F_CONTIGUOUS, NULL);
+	      }
+
 	    if (!jacobianNumpy)
 	      {
 		PyErr_SetString (PyExc_TypeError, "cannot convert result");
@@ -1176,7 +1186,7 @@ getName (PyObject*, PyObject* args)
 }
 
 static PyObject*
-getStorageOrder (PyObject*, PyObject* args)
+getStorageOrder (PyObject*, PyObject*)
 {
   char storage_order = (::roboptim::core::python::NPY_STORAGE_ORDER == NPY_F_CONTIGUOUS)? 'F':'C';
   return Py_BuildValue("c", storage_order);
