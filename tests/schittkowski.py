@@ -242,7 +242,6 @@ class TestFunctionPy(unittest.TestCase):
         # Check starting value
         numpy.testing.assert_almost_equal (cost (problem.startingPoint)[0], 84.)
 
-        # Let the test fail if the solver does not exist.
         solver = roboptim.core.PySolver ("ipopt", problem)
         solver.setParameter("ipopt.output_file", "problem_48.log")
         print (solver)
