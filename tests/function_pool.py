@@ -110,6 +110,8 @@ class TestFunctionPoolPy(unittest.TestCase):
         res = pool (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        np.testing.assert_almost_equal (res,
+                [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
         assert engine.compute_counter == 1
         assert engine.jacobian_counter == 0
         engine.reset ()
@@ -141,6 +143,8 @@ class TestFunctionPoolPy(unittest.TestCase):
         res = fd_pool (x)
         np.testing.assert_almost_equal (engine.data,
                 [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        np.testing.assert_almost_equal (res,
+                [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
         assert engine.compute_counter == 1
         assert engine.jacobian_counter == 0
         engine.reset ()
@@ -153,6 +157,38 @@ class TestFunctionPoolPy(unittest.TestCase):
         np.testing.assert_almost_equal (fd_pool_jac, jac, 5)
         assert engine.compute_counter == 1 + len(x) # simple rule: (f(x+h)-f(x))/h
         assert engine.jacobian_counter == 0
+        engine.reset ()
+
+    def test_pool_parallel(self):
+        n = 3
+        engine = Engine (n)
+        np.testing.assert_almost_equal (engine.data, np.zeros (engine.n))
+        functions = [Square (engine, float(i)) for i in range (n)]
+        print(engine)
+
+        pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy pool", n_proc = 4)
+        print(pool)
+
+        x = np.array([10., -5., 1., 2., -1., 1.])
+        assert len(x) == 2 * n
+
+        res = pool (x)
+        np.testing.assert_almost_equal (engine.data,
+                [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        np.testing.assert_almost_equal (res,
+                [xi**2 + yi**2 for xi,yi in x.reshape(engine.n, 2) ])
+        assert engine.compute_counter == 1
+        assert engine.jacobian_counter == 0
+        engine.reset ()
+
+        pool_jac = pool.jacobian (x)
+        jac = np.zeros ((engine.n, 2*engine.n))
+        for i in range(engine.n):
+            for j in range(2):
+                jac[i,2*i+j] = 2. * x[2*i+j]
+        np.testing.assert_almost_equal (pool_jac, jac)
+        assert engine.compute_counter == 0
+        assert engine.jacobian_counter == 1
         engine.reset ()
 
 if __name__ == '__main__':

@@ -6,6 +6,8 @@ import inspect
 import os
 import numpy
 
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
 # Here, we use RTLD_GLOBAL to link with roboptim-core since the Python module
 # is a plugin, itself calling RobOptim solver plugins. Without this, the Python
 # plugin cannot access local symbols of roboptim-core. This is not ideal, but
@@ -129,7 +131,7 @@ class PyDifferentiableFunction(PyFunction):
 
 
 class PyFunctionPool(PyDifferentiableFunction):
-    def __init__ (self, callback, functions, name = ""):
+    def __init__ (self, callback, functions, name = "", n_proc = 0):
         self._callback = callback
         self._functions = functions
         inSize = callback.inputSize ()
@@ -142,15 +144,26 @@ class PyFunctionPool(PyDifferentiableFunction):
         bindJacobian (self._function,
                       lambda result, x: self.impl_jacobian (result, x))
 
-    def impl_compute (self, result, x):
-        # Run callback
-        self._callback (x)
-        # Fill result
+        # Can be used as a row index for parallel Jacobian filling process
+        self._ranges = list()
         pos = 0
         for f in self._functions:
             size = f.outputSize ()
-            result[pos:pos+size] = f (x)
+            self._ranges.append((pos, pos + size))
             pos += size
+
+        # Multiprocessing support
+        self._n_proc = n_proc
+
+    def impl_compute (self, result, x):
+        # Run callback
+        self._callback (x)
+
+        # Fill result
+        for i,f in enumerate(self._functions):
+            start = self._ranges[i][0]
+            end = self._ranges[i][1]
+            result[start:end] = f(x)
 
     def impl_gradient (self, result, x, functionId):
         raise NotImplementedError
@@ -162,12 +175,26 @@ class PyFunctionPool(PyDifferentiableFunction):
 
         # Run callback
         self._callback.jacobian (x)
+
+        def _parallel_jac_eval(data):
+            f = data[0]
+            x = data[1]
+            res = data[2]
+            r = data[3]
+            res[r[0]:r[1],:] = f.jacobian (x)
+
         # Fill Jacobian
-        row = 0
-        for f in self._functions:
-            size = f.outputSize ()
-            result[row:row+size,:] = f.jacobian (x)
-            row += size
+        # Parallel implementation
+        if self._n_proc > 0:
+            with ProcessPoolExecutor(max_workers=self._n_proc) as executor:
+                for i,f in enumerate(self._functions):
+                    executor.submit(_parallel_jac_eval, (f, x, result, self._ranges[i]))
+        # Serial implementation
+        else:
+            for i,f in enumerate(self._functions):
+                start = self._ranges[i][0]
+                end = self._ranges[i][1]
+                result[start:end,:] = f.jacobian (x)
 
     def jacobian (self, x):
         jac = numpy.zeros ((self.outputSize (), self.inputSize ()), order=self.order())
