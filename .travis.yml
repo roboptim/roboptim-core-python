@@ -1,7 +1,4 @@
 language: python
-compiler:
-  - gcc
-  - clang
 python:
   - "2.7"
   - "3.4"
@@ -36,8 +33,7 @@ after_success:
   # Print Ipopt logs even after success
   - . .travis/common.sh
   - "find $build_dir/tests -name \"*.log\" | xargs -i sh -c \"echo '####### Printing content of {} ######'; cat {}\""
+  # Fix for coveralls upload
+  - export CC=gcc
   - ./.travis/run after_success
 after_failure: ./.travis/run after_failure
-matrix:
-  allow_failures:
-    - compiler: clang
