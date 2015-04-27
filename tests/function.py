@@ -129,19 +129,18 @@ class TestFunctionPy(unittest.TestCase):
         print ("Jac(f_pickled)(x) = %s" % f_pickled.jacobian (x))
         self.assertEqual (f.jacobian (x), f_pickled.jacobian (x))
 
-        # Test scenario: multiprocess
-        with ProcessPoolExecutor(max_workers=2) as executor:
-            res = numpy.zeros (4)
-            jobs = list()
-            for i in range(4):
-                y = numpy.array ([i])
-                job = executor.submit(test_function_multiprocess, (f, y, i))
-                jobs.append(job)
+        def done_callback(future):
+            idx, value = future.result()
+            print("%i ---> %s" % (idx, value))
+            self.assertEqual (idx**2, value)
 
-            for job in as_completed(jobs):
-                idx, value = job.result()
-                print("%i ---> %s" % (idx, value))
-                self.assertEqual (idx**2, value)
+        # Test scenario: multiprocess
+        with ProcessPoolExecutor(max_workers=4) as executor:
+            res = numpy.zeros (4)
+            jobs = [executor.submit(test_function_multiprocess,
+                    (f, numpy.array ([i]), i)) \
+                    .add_done_callback(done_callback)
+                    for i in range(4)]
 
     def test_problem(self):
         cost = Square()

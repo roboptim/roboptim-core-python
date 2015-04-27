@@ -215,18 +215,17 @@ class PyFunctionPool(PyDifferentiableFunction):
         # Run callback
         self._callback.jacobian (x)
 
+        def parallel_pool_jac_fill(future):
+            idx, value = future.result()
+            result[self._ranges[idx][0]:self._ranges[idx][1]] = value
+
         # Fill Jacobian
         # Parallel implementation
         if self._n_proc > 1:
             with ProcessPoolExecutor(max_workers=self._n_proc) as executor:
-                jobs = list()
-                for i,f in enumerate(self._functions):
-                    job = executor.submit(parallel_pool_jac_eval, (f, x, i))
-                    jobs.append(job)
-
-                for job in as_completed(jobs):
-                    idx, value = job.result()
-                    result[self._ranges[idx][0]:self._ranges[idx][1]] = value
+                jobs = [executor.submit(parallel_pool_jac_eval, (f, x, i)) \
+                        .add_done_callback(parallel_pool_jac_fill)
+                        for i,f in enumerate(self._functions)]
         # Serial implementation
         else:
             for i,f in enumerate(self._functions):
