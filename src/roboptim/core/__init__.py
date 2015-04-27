@@ -25,6 +25,9 @@ class PyFunction(object):
     def __init__ (self, inSize, outSize, name):
         self._function = Function (inSize, outSize,
                                    self._formatName(name))
+        self._setCallbacks()
+
+    def _setCallbacks (self):
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
 
@@ -72,6 +75,30 @@ class PyFunction(object):
     def __str__ (self):
         return strFunction (self._function)
 
+    def _getStateImpl(self, odict):
+        # Remove PyCapsule object
+        del odict["_function"]
+
+    def __getstate__(self):
+        odict = self.__dict__.copy()
+        self._getStateImpl(odict)
+        odict["inSize"] = self.inputSize ()
+        odict["outSize"] = self.outputSize ()
+        odict["name"] = self.name ()
+        return odict
+
+    def _setStateImpl(self, idict):
+        self._function = Function (idict["inSize"], idict["outSize"],
+                                   self._formatName(idict["name"]))
+
+    def __setstate__(self, idict):
+        self._setStateImpl (idict)
+        del idict["inSize"]
+        del idict["outSize"]
+        del idict["name"]
+        self.__dict__.update(idict)
+        self._setCallbacks ()
+
     @classmethod
     def __subclasshook__ (cls, C):
         if cls is PyFunction:
@@ -88,6 +115,9 @@ class PyDifferentiableFunction(PyFunction):
     def __init__ (self, inSize, outSize, name):
         self._function = DifferentiableFunction (inSize, outSize,
                                                  self._formatName(name))
+        self._setCallbacks()
+
+    def _setCallbacks (self):
         bindCompute (self._function,
                      lambda result, x: self.impl_compute (result, x))
         gradientCb = lambda result, x, fid: self.impl_gradient (result, x, fid)
@@ -119,6 +149,10 @@ class PyDifferentiableFunction(PyFunction):
         jac = numpy.zeros ((self.outputSize (), self.inputSize ()), order=self.order())
         jacobian (self._function, jac, x)
         return jac
+
+    def _setStateImpl(self, idict):
+        self._function = DifferentiableFunction (idict["inSize"], idict["outSize"],
+                                                 self._formatName(idict["name"]))
 
     @classmethod
     def __subclasshook__ (cls, C):

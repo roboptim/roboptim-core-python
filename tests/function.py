@@ -6,6 +6,9 @@ from __future__ import \
 import unittest
 import roboptim.core
 import numpy, numpy.testing
+import pickle
+import os
+from concurrent.futures import ProcessPoolExecutor
 
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
@@ -46,6 +49,10 @@ class DoubleSquare (roboptim.core.PyDifferentiableFunction):
     def impl_gradient (self, result, x, f_id):
         result[0] = 2. * x[0]
 
+def test_function_multiprocess (args):
+    f = args[0]
+    x = args[1]
+    print (f (x))
 
 class TestFunctionPy(unittest.TestCase):
     def test_function(self):
@@ -95,6 +102,36 @@ class TestFunctionPy(unittest.TestCase):
         print ("Jac(f)(x) = %s" % f.jacobian (x))
         self.assertEqual (f.jacobian (x), 2. * x[0])
         self.assertEqual ("square function (differentiable function)", "%s" % f)
+
+    def test_function_pickle(self):
+        f = SquareJacobian ()
+        file_name = "test_function_pickle.dump"
+        dump_file = open (file_name,'wb')
+        pickle.dump (f,dump_file)
+        dump_file.close ()
+
+        dump_file = open (file_name,'r')
+        f_pickled = pickle.load (dump_file)
+        dump_file.close ()
+
+        os.remove(file_name)
+
+        # Compare f and f_pickled
+        x = numpy.array ([6.,])
+        print ("f: %s" % f)
+        print ("f_pickled: %s" % f_pickled)
+        print ("f(x) = %s" % f (x))
+        print ("f_pickled(x) = %s" % f_pickled (x))
+        self.assertEqual (f (x), f_pickled (x))
+        print ("Jac(f)(x) = %s" % f.jacobian (x))
+        print ("Jac(f_pickled)(x) = %s" % f_pickled.jacobian (x))
+        self.assertEqual (f.jacobian (x), f_pickled.jacobian (x))
+
+        # Test scenario: multiprocess
+        with ProcessPoolExecutor(max_workers=2) as executor:
+            for i in range(4):
+                y = numpy.array ([i])
+                executor.submit(test_function_multiprocess, (f, y))
 
     def test_problem(self):
         cost = Square()
