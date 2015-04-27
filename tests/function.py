@@ -112,7 +112,7 @@ class TestFunctionPy(unittest.TestCase):
         pickle.dump (f,dump_file)
         dump_file.close ()
 
-        dump_file = open (file_name,'r')
+        dump_file = open (file_name,'rb')
         f_pickled = pickle.load (dump_file)
         dump_file.close ()
 
