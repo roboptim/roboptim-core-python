@@ -1,6 +1,4 @@
-# Update PYTHONPATH to use built files
-SET(ENV{PYTHONPATH} "${CMAKE_BINARY_DIR}/src")
-
+# Use adequate Python executable for tests
 SET(TEST_COMMAND "${PYTHON_EXECUTABLE}")
 
 # Check roboptim-py internal API.
