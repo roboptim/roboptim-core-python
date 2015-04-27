@@ -166,7 +166,8 @@ class TestFunctionPoolPy(unittest.TestCase):
         functions = [Square (engine, float(i)) for i in range (n)]
         print(engine)
 
-        pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy pool", n_proc = 4)
+        pool = roboptim.core.PyFunctionPool (engine, functions, name = "Dummy pool",
+                n_proc = 2)
         print(pool)
 
         x = np.array([10., -5., 1., 2., -1., 1.])

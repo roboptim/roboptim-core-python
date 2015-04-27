@@ -8,7 +8,7 @@ import roboptim.core
 import numpy, numpy.testing
 import pickle
 import os
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 class Square (roboptim.core.PyDifferentiableFunction):
     def __init__ (self):
@@ -52,7 +52,9 @@ class DoubleSquare (roboptim.core.PyDifferentiableFunction):
 def test_function_multiprocess (args):
     f = args[0]
     x = args[1]
+    i = args[2]
     print (f (x))
+    return i, f (x)
 
 class TestFunctionPy(unittest.TestCase):
     def test_function(self):
@@ -129,9 +131,17 @@ class TestFunctionPy(unittest.TestCase):
 
         # Test scenario: multiprocess
         with ProcessPoolExecutor(max_workers=2) as executor:
+            res = numpy.zeros (4)
+            jobs = list()
             for i in range(4):
                 y = numpy.array ([i])
-                executor.submit(test_function_multiprocess, (f, y))
+                job = executor.submit(test_function_multiprocess, (f, y, i))
+                jobs.append(job)
+
+            for job in as_completed(jobs):
+                idx, value = job.result()
+                print("%i ---> %s" % (idx, value))
+                self.assertEqual (idx**2, value)
 
     def test_problem(self):
         cost = Square()

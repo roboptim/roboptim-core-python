@@ -6,7 +6,7 @@ import inspect
 import os
 import numpy
 
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # Here, we use RTLD_GLOBAL to link with roboptim-core since the Python module
 # is a plugin, itself calling RobOptim solver plugins. Without this, the Python
@@ -18,6 +18,11 @@ CDLL("libroboptim-core.so", RTLD_GLOBAL)
 
 from .wrap import *
 
+def parallel_pool_jac_eval(data):
+    f = data[0]
+    x = data[1]
+    i = data[2]
+    return i, f.jacobian (x)
 
 class PyFunction(object):
     __metaclass__ = abc.ABCMeta
@@ -210,19 +215,18 @@ class PyFunctionPool(PyDifferentiableFunction):
         # Run callback
         self._callback.jacobian (x)
 
-        def _parallel_jac_eval(data):
-            f = data[0]
-            x = data[1]
-            res = data[2]
-            r = data[3]
-            res[r[0]:r[1],:] = f.jacobian (x)
-
         # Fill Jacobian
         # Parallel implementation
-        if self._n_proc > 0:
+        if self._n_proc > 1:
             with ProcessPoolExecutor(max_workers=self._n_proc) as executor:
+                jobs = list()
                 for i,f in enumerate(self._functions):
-                    executor.submit(_parallel_jac_eval, (f, x, result, self._ranges[i]))
+                    job = executor.submit(parallel_pool_jac_eval, (f, x, i))
+                    jobs.append(job)
+
+                for job in as_completed(jobs):
+                    idx, value = job.result()
+                    result[self._ranges[idx][0]:self._ranges[idx][1]] = value
         # Serial implementation
         else:
             for i,f in enumerate(self._functions):
