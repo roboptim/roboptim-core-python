@@ -915,22 +915,45 @@ namespace detail
     {
       return PyString_FromString (p.c_str ());
     }
+
+    PyObject* operator () (const char* p) const
+    {
+      return PyString_FromString (p);
+    }
+
+    PyObject* operator () (bool b) const
+    {
+      return PyBool_FromLong (b);
+    }
+
+    PyObject* operator () (roboptim::Function::const_vector_ref v) const
+    {
+      npy_intp n = static_cast<npy_intp> (v.size ());
+
+      return PyArray_SimpleNewFromData
+        (1, &n, NPY_DOUBLE, const_cast<double*> (v.data ()));
+    }
   };
 
   parameter_t::parameterValues_t toParameterValue (PyObject* obj)
   {
     // Value can be: double, int, or std::string
 
-    // String
-    if (PyString_Check (obj))
+    // Bool
+    if (PyBool_Check (obj))
       {
-	return PyString_AsString (obj);
+        return bool (PyObject_RichCompareBool (obj, Py_True, Py_EQ) == 1);
+      }
+    // String
+    else if (PyString_Check (obj))
+      {
+	return std::string (PyString_AsString (obj));
       }
     // Unicode string
     else if (PyUnicode_Check (obj))
       {
         PyObject* u = PyUnicode_AsUTF8String (obj);
-        parameter_t::parameterValues_t str = PyString_AsString (u);
+        parameter_t::parameterValues_t str = std::string (PyString_AsString (u));
         Py_DECREF (u);
         return str;
       }
@@ -944,10 +967,20 @@ namespace detail
       {
         return PyFloat_AsDouble (obj);
       }
+    // NumPy vector
+    else if (PyArray_Check (obj) && PyArray_ISFLOAT (obj)
+             && PyArray_ITEMSIZE (obj) == sizeof (double))
+      {
+	// Directly map Eigen vector to the numpy array data.
+	Eigen::Map<Function::vector_t> vecEigen
+	  (static_cast<double*> (PyArray_DATA (obj)), PyArray_SIZE (obj));
+	return vecEigen;
+      }
 
     PyErr_SetString
       (PyExc_TypeError,
-       "invalid parameter value (should be double, int or string).");
+       "invalid parameter value (should be double, int, string, "
+       "bool or NumPy float vector).");
 
     return 0;
   }
@@ -968,6 +1001,11 @@ namespace detail
     PyObject* operator () (const std::string& p) const
     {
       return PyString_FromString (p.c_str ());
+    }
+
+    PyObject* operator () (const char* p) const
+    {
+      return PyString_FromString (p);
     }
 
     PyObject* operator () (bool b) const
@@ -993,12 +1031,12 @@ namespace detail
         return bool (PyObject_RichCompareBool (obj, Py_True, Py_EQ) == 1);
       }
     // NumPy vector
-    else if (PyArray_Check (obj))
+    else if (PyArray_Check (obj) && PyArray_ISFLOAT (obj)
+             && PyArray_ITEMSIZE (obj) == sizeof (double))
       {
 	// Directly map Eigen vector to the numpy array data.
 	Eigen::Map<Function::vector_t> vecEigen
-	  (static_cast<double*>
-	   (PyArray_DATA (obj)), PyArray_ITEMSIZE (obj));
+	  (static_cast<double*> (PyArray_DATA (obj)), PyArray_SIZE (obj));
 	return vecEigen;
       }
     // String, unicode string, integer, double
@@ -1010,8 +1048,8 @@ namespace detail
 
     PyErr_SetString
       (PyExc_TypeError,
-       "invalid parameter value (should be double, int, string,"
-       "bool or NumPy vector).");
+       "invalid parameter value (should be double, int, string, "
+       "bool or NumPy float vector).");
 
     return 0;
   }

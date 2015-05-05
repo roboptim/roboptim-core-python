@@ -188,7 +188,9 @@ class TestFunctionPy(unittest.TestCase):
         test_parameters = list()
         test_parameters.append (("foo_int", 42, "an integer"))
         test_parameters.append (("foo_double", 12., "a scalar"))
+        test_parameters.append (("foo_bool", False, "a boolean"))
         test_parameters.append (("foo_str", "foo", "a string"))
+        test_parameters.append (("foo_vec", numpy.array ([1., 2., 3., 4.]), "a vector"))
 
         for p in test_parameters:
             solver.setParameter (p[0], p[1], p[2])
@@ -208,7 +210,11 @@ class TestFunctionPy(unittest.TestCase):
             else:
                 val = p[1]
             assert parameters[p[0]][0] == p[2].encode ('utf-8')
-            assert parameters[p[0]][1] == val
+            # NumPy check
+            if type(val).__module__ == numpy.__name__:
+                assert numpy.array_equal(parameters[p[0]][1], val)
+            else:
+                assert parameters[p[0]][1] == val
 
         print (solver)
 
