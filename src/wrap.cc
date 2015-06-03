@@ -1857,7 +1857,7 @@ setArgumentBounds (PyObject*, PyObject* args)
 }
 
 static PyObject*
-getArgumentScales (PyObject*, PyObject* args)
+getArgumentScaling (PyObject*, PyObject* args)
 {
   problem_t* problem = 0;
   if (!PyArg_ParseTuple (args, "O&", &detail::problemConverter, &problem))
@@ -1870,56 +1870,56 @@ getArgumentScales (PyObject*, PyObject* args)
 
   npy_intp inputSize =
     static_cast<npy_intp> (problem->function ().inputSize ());
-  PyObject* scalesNumpy = PyArray_SimpleNew (1, &inputSize, NPY_DOUBLE);
+  PyObject* scalingNumpy = PyArray_SimpleNew (1, &inputSize, NPY_DOUBLE);
 
-  Eigen::Map<Function::vector_t> scalesEigen
-    (static_cast<double*> (PyArray_DATA (scalesNumpy)),
+  Eigen::Map<Function::vector_t> scalingEigen
+    (static_cast<double*> (PyArray_DATA (scalingNumpy)),
      problem->function ().inputSize ());
 
   for (Function::size_type i = 0; i < inputSize; ++i)
-    scalesEigen[i] = problem->argumentScales ()[i];
-  return scalesNumpy;
+    scalingEigen[i] = problem->argumentScaling ()[i];
+  return scalingNumpy;
 }
 
 static PyObject*
-setArgumentScales (PyObject*, PyObject* args)
+setArgumentScaling (PyObject*, PyObject* args)
 {
   problem_t* problem = 0;
-  PyObject* scales = 0;
+  PyObject* scaling = 0;
   if (!PyArg_ParseTuple
-      (args, "O&O", &detail::problemConverter, &problem, &scales))
+      (args, "O&O", &detail::problemConverter, &problem, &scaling))
     return 0;
   if (!problem)
     {
       PyErr_SetString (PyExc_TypeError, "1st argument must be a problem");
       return 0;
     }
-  PyObject* scalesNumpy =
+  PyObject* scalingNumpy =
     PyArray_FROM_OTF
-    (scales, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
-  if (!scalesNumpy)
+    (scaling, NPY_DOUBLE, NPY_IN_ARRAY & ::roboptim::core::python::NPY_STORAGE_ORDER);
+  if (!scalingNumpy)
     {
-      Py_XDECREF (scalesNumpy);
+      Py_XDECREF (scalingNumpy);
       PyErr_SetString (PyExc_TypeError,
 		       "failed to build numpy array from 2st argument");
       return 0;
     }
 
-  if (PyArray_DIM (scalesNumpy, 0) != problem->function ().inputSize ())
+  if (PyArray_DIM (scalingNumpy, 0) != problem->function ().inputSize ())
     {
       PyErr_SetString (PyExc_TypeError, "invalid size");
       return 0;
     }
 
-  Eigen::Map<Function::vector_t> scalesEigen
-    (static_cast<double*> (PyArray_DATA (scalesNumpy)),
+  Eigen::Map<Function::vector_t> scalingEigen
+    (static_cast<double*> (PyArray_DATA (scalingNumpy)),
      problem->function ().inputSize ());
 
   for (size_t i = 0; i < static_cast<size_t> (problem->function ().inputSize ()); ++i)
-    problem->argumentScales ()[i] = scalesEigen[i];
+    problem->argumentScaling ()[i] = scalingEigen[i];
 
   // Clean up.
-  Py_DECREF (scalesNumpy);
+  Py_DECREF (scalingNumpy);
 
   Py_INCREF (Py_None);
   return Py_None;
@@ -2009,9 +2009,9 @@ addConstraint (PyObject*, PyObject* args)
            && PyArray_DIMS (py_bounds)[1] == 2)
     {
       typedef problem_t::intervals_t intervals_t;
-      typedef problem_t::scales_t    scales_t;
+      typedef problem_t::scaling_t    scaling_t;
 
-      scales_t scales (constraint->outputSize (), 1.);
+      scaling_t scaling (constraint->outputSize (), 1.);
       intervals_t bounds (constraint->outputSize ());
 
       for (Function::size_type i = 0; i < constraint->outputSize (); ++i)
@@ -2021,7 +2021,7 @@ addConstraint (PyObject*, PyObject* args)
 	  bounds[i].second = * (double*) (PyArray_GETPTR2 (py_bounds, i, 1));
 	}
 
-      problem->addConstraint (constraint, bounds, scales);
+      problem->addConstraint (constraint, bounds, scaling);
     }
   else
     {
@@ -2999,10 +2999,10 @@ static PyMethodDef RobOptimCoreMethods[] =
      "Get the problem argument bounds."},
     {"setArgumentBounds", setArgumentBounds, METH_VARARGS,
      "Set the problem argument bounds."},
-    {"getArgumentScales", getArgumentScales, METH_VARARGS,
-     "Get the problem scales."},
-    {"setArgumentScales", setArgumentScales, METH_VARARGS,
-     "Set the problem scales."},
+    {"getArgumentScaling", getArgumentScaling, METH_VARARGS,
+     "Get the problem scaling."},
+    {"setArgumentScaling", setArgumentScaling, METH_VARARGS,
+     "Set the problem scaling."},
     {"addConstraint", addConstraint, METH_VARARGS,
      "Add a constraint to the problem."},
 

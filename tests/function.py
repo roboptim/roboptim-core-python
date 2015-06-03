@@ -158,8 +158,8 @@ class TestFunctionPy(unittest.TestCase):
         problem.argumentBounds = numpy.array([[-3.,4.],])
         numpy.testing.assert_almost_equal (problem.argumentBounds, [[-3.,4.],])
 
-        problem.argumentScales = numpy.array([2.,])
-        numpy.testing.assert_almost_equal (problem.argumentScales, [2.,])
+        problem.argumentScaling = numpy.array([2.,])
+        numpy.testing.assert_almost_equal (problem.argumentScaling, [2.,])
 
         g1 = Square ()
         problem.addConstraint (g1, [-1., 10.,])

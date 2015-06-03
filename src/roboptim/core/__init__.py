@@ -308,12 +308,12 @@ class PyProblem(object):
         setArgumentBounds (self._problem, value)
 
     @property
-    def argumentScales(self):
-        return getArgumentScales (self._problem)
+    def argumentScaling(self):
+        return getArgumentScaling (self._problem)
 
-    @argumentScales.setter
-    def argumentScales(self, value):
-        setArgumentScales (self._problem, value)
+    @argumentScaling.setter
+    def argumentScaling(self, value):
+        setArgumentScaling (self._problem, value)
 
     def addConstraint (self, constraint, bounds):
         addConstraint (self._problem, constraint._function, bounds)
