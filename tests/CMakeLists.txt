@@ -1,33 +1,33 @@
 # Use adequate Python executable for tests
 SET(TEST_COMMAND "${PYTHON_EXECUTABLE}")
 
+MACRO(REGISTER_TEST NAME)
+  ADD_TEST(${NAME} "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/${NAME}.py")
+  # Update PYTHONPATH to find the Python module
+  SET_TESTS_PROPERTIES(${NAME} PROPERTIES ENVIRONMENT
+    "PYTHONPATH=${CMAKE_BINARY_DIR}/src")
+ENDMACRO()
+
 # Check roboptim-py internal API.
-ADD_TEST(wrap "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/wrap.py")
+REGISTER_TEST(wrap)
 
 # Check high-level API.
-ADD_TEST(function
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/function.py")
+REGISTER_TEST(function)
 
 # Test some actual problems
-ADD_TEST(schittkowski
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/schittkowski.py")
+REGISTER_TEST(schittkowski)
 
 # Check solver callback support.
-ADD_TEST(solver_callback
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/solver_callback.py")
+REGISTER_TEST(solver_callback)
 
 # Check finite-differences support.
-ADD_TEST(finite_differences
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/finite_differences.py")
+REGISTER_TEST(finite_differences)
 
 # Check cached function support.
-ADD_TEST(cached_function
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/cached_function.py")
+REGISTER_TEST(cached_function)
 
 # Check function pool support.
-ADD_TEST(function_pool
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/function_pool.py")
+REGISTER_TEST(function_pool)
 
 # Check plotting support.
-ADD_TEST(plot
-  "${TEST_COMMAND}" "${CMAKE_CURRENT_SOURCE_DIR}/plot.py")
+REGISTER_TEST(plot)
