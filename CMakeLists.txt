@@ -26,6 +26,7 @@ SET(PROJECT_DESCRIPTION "RobOptim Core Python")
 SET(PROJECT_URL "http://github.com/roboptim/roboptim-core-python")
 
 SET(HEADERS
+  ${CMAKE_SOURCE_DIR}/include/roboptim/core/python/to-python.hh
   )
 
 SET(CXX_DISABLE_WERROR 1) #FIXME: disable for now.
@@ -33,7 +34,8 @@ SET(CXX_DISABLE_WERROR 1) #FIXME: disable for now.
 SETUP_PROJECT()
 
 # Search for dependencies.
-SET(BOOST_COMPONENTS filesystem system thread date_time)
+SET(BOOST_COMPONENTS filesystem system thread date_time
+  unit_test_framework)
 SEARCH_FOR_BOOST()
 ADD_REQUIRED_DEPENDENCY("roboptim-core >= 3.1")
 

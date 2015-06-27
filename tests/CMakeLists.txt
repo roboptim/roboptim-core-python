@@ -1,3 +1,7 @@
+#######################################################################
+#                            Python module                            #
+#######################################################################
+
 # Use adequate Python executable for tests
 SET(TEST_COMMAND "${PYTHON_EXECUTABLE}")
 
@@ -31,3 +35,38 @@ REGISTER_TEST(function_pool)
 
 # Check plotting support.
 REGISTER_TEST(plot)
+
+#######################################################################
+#                             C++ library                             #
+#######################################################################
+
+# Make Boost.Test generates the main function in test cases.
+ADD_DEFINITIONS(-DBOOST_TEST_DYN_LINK -DBOOST_TEST_MAIN)
+
+# To locate built plug-ins.
+ADD_DEFINITIONS(-DPLUGIN_PATH="${ROBOPTIM_CORE_PLUGINDIR}")
+
+# To locate test data.
+ADD_DEFINITIONS(-DTESTS_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
+
+# ROBOPTIM_CORE_PYTHON_TEST(NAME)
+# ------------------------
+#
+# Define a test named `NAME'.
+#
+# This macro will create a binary from `NAME.cc', link it against
+# relevant libraries and add it to the test suite.
+#
+MACRO(ROBOPTIM_CORE_PYTHON_TEST NAME)
+  ADD_EXECUTABLE(${NAME} ${NAME}.cc)
+  ADD_TEST(NAME ${NAME}
+    COMMAND ${CHECK_PREFIX} ${CMAKE_CURRENT_BINARY_DIR}/${NAME})
+
+  PKG_CONFIG_USE_DEPENDENCY(${NAME} roboptim-core)
+  TARGET_LINK_LIBRARIES(${NAME} roboptim-core-python)
+
+  # Link against Boost.
+  TARGET_LINK_LIBRARIES(${NAME} ${Boost_LIBRARIES})
+ENDMACRO(ROBOPTIM_CORE_PYTHON_TEST)
+
+ROBOPTIM_CORE_PYTHON_TEST(to-python)

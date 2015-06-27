@@ -1,6 +1,10 @@
 INCLUDE_DIRECTORIES(SYSTEM ${PYTHON_INCLUDE_PATH})
 INCLUDE_DIRECTORIES(SYSTEM ${NUMPY_INCLUDE_DIRS})
 
+#######################################################################
+#                            Python module                            #
+#######################################################################
+
 SET(LOCAL_MODULE_DIR "${PROJECT_BINARY_DIR}/src")
 
 # Compile module
@@ -22,3 +26,17 @@ PYTHON_INSTALL_ON_SITE(roboptim __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core/visualization __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core/visualization plotter.py)
+
+#######################################################################
+#                             C++ library                             #
+#######################################################################
+
+# Compile library
+ADD_LIBRARY(roboptim-core-python SHARED
+  ${HEADERS}
+  to-python.cc)
+
+TARGET_LINK_LIBRARIES(roboptim-core-python ${PYTHON_LIBRARIES})
+SET_TARGET_PROPERTIES(roboptim-core-python
+  PROPERTIES SOVERSION 3 VERSION 3.1.0)
+INSTALL(TARGETS roboptim-core-python DESTINATION ${CMAKE_INSTALL_LIBDIR})
