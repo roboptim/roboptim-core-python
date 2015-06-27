@@ -35,7 +35,7 @@ SETUP_PROJECT()
 # Search for dependencies.
 SET(BOOST_COMPONENTS filesystem system thread date_time)
 SEARCH_FOR_BOOST()
-ADD_REQUIRED_DEPENDENCY("roboptim-core >= 3.0")
+ADD_REQUIRED_DEPENDENCY("roboptim-core >= 3.1")
 
 # Python 2 and 3 are supported
 FINDPYTHON()
