@@ -2,6 +2,22 @@ INCLUDE_DIRECTORIES(SYSTEM ${PYTHON_INCLUDE_PATH})
 INCLUDE_DIRECTORIES(SYSTEM ${NUMPY_INCLUDE_DIRS})
 
 #######################################################################
+#                             C++ library                             #
+#######################################################################
+
+# Compile library
+ADD_LIBRARY(roboptim-core-python SHARED
+  ${HEADERS}
+  common.hh
+  common.cc
+  to-python.cc)
+
+TARGET_LINK_LIBRARIES(roboptim-core-python ${PYTHON_LIBRARIES})
+SET_TARGET_PROPERTIES(roboptim-core-python
+  PROPERTIES SOVERSION 3 VERSION 3.1.0)
+INSTALL(TARGETS roboptim-core-python DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+#######################################################################
 #                            Python module                            #
 #######################################################################
 
@@ -17,6 +33,8 @@ SET_TARGET_PROPERTIES(wrap PROPERTIES
 # Link against Boost.
 TARGET_LINK_LIBRARIES(wrap ${Boost_LIBRARIES})
 
+TARGET_LINK_LIBRARIES(wrap roboptim-core-python)
+
 SET_TARGET_PROPERTIES(wrap PROPERTIES PREFIX "")
 
 # Install libraries
@@ -26,17 +44,3 @@ PYTHON_INSTALL_ON_SITE(roboptim __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core/visualization __init__.py)
 PYTHON_INSTALL_ON_SITE(roboptim/core/visualization plotter.py)
-
-#######################################################################
-#                             C++ library                             #
-#######################################################################
-
-# Compile library
-ADD_LIBRARY(roboptim-core-python SHARED
-  ${HEADERS}
-  to-python.cc)
-
-TARGET_LINK_LIBRARIES(roboptim-core-python ${PYTHON_LIBRARIES})
-SET_TARGET_PROPERTIES(roboptim-core-python
-  PROPERTIES SOVERSION 3 VERSION 3.1.0)
-INSTALL(TARGETS roboptim-core-python DESTINATION ${CMAKE_INSTALL_LIBDIR})

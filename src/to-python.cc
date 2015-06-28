@@ -20,11 +20,13 @@
 #include <iostream>
 #include <string>
 
+#include <boost/format.hpp>
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
 #include <Python.h>
 
+#include "common.hh"
 
 namespace roboptim
 {
@@ -77,7 +79,7 @@ namespace roboptim
     PyTypeObject StdoutType =
     {
       PyVarObject_HEAD_INIT(0, 0)
-      "emb.StdoutType",     /* tp_name */
+      "redirc.StdoutType",  /* tp_name */
       sizeof(Stdout),       /* tp_basicsize */
       0,                    /* tp_itemsize */
       0,                    /* tp_dealloc */
@@ -96,7 +98,7 @@ namespace roboptim
       0,                    /* tp_setattro */
       0,                    /* tp_as_buffer */
       Py_TPFLAGS_DEFAULT,   /* tp_flags */
-      "emb.Stdout objects", /* tp_doc */
+      "redir.Stdout objects", /* tp_doc */
       0,                    /* tp_traverse */
       0,                    /* tp_clear */
       0,                    /* tp_richcompare */
@@ -117,33 +119,49 @@ namespace roboptim
       0                     /* tp_free */
     };
 
-    PyModuleDef embmodule =
+#if PY_MAJOR_VERSION >= 3
+    PyModuleDef redirmodule =
     {
       PyModuleDef_HEAD_INIT,
-      "emb", 0, -1, 0,
+      "redir", 0, -1, 0,
     };
+#endif //! PY_MAJOR_VERSION
 
     // Internal state
     PyObject* g_stdout;
     PyObject* g_stdout_saved;
 
-    PyMODINIT_FUNC PyInit_emb (void)
+    PyMODINIT_FUNC PyInit_redir (void)
     {
       g_stdout = 0;
       g_stdout_saved = 0;
 
       StdoutType.tp_new = PyType_GenericNew;
       if (PyType_Ready (&StdoutType) < 0)
+#if PY_MAJOR_VERSION >= 3
         return 0;
+#else
+        return;
+#endif //! PY_MAJOR_VERSION
 
-      PyObject* m = PyModule_Create (&embmodule);
+      PyObject* m = 0;
+
+#if PY_MAJOR_VERSION >= 3
+      m = PyModule_Create (&redirmodule);
+#else
+      m = Py_InitModule ("redir", Stdout_methods);
+#endif //! PY_MAJOR_VERSION
+
       if (m)
       {
         Py_INCREF (&StdoutType);
         PyModule_AddObject(m, "Stdout",
                            reinterpret_cast<PyObject*> (&StdoutType));
       }
+
+#if PY_MAJOR_VERSION >= 3
       return m;
+#endif //! PY_MAJOR_VERSION
     }
 
     void set_stdout (stdout_write_type write)
@@ -174,9 +192,9 @@ namespace roboptim
 
     ToPython::ToPython () : buffer_ ()
     {
-      PyImport_AppendInittab ("emb", PyInit_emb);
+      PyImport_AppendInittab ("redir", PyInit_redir);
       Py_Initialize ();
-      PyImport_ImportModule ("emb");
+      PyImport_ImportModule ("redir");
 
       // Switch sys.stdout to custom handler
       stdout_write_type write = boost::bind (&ToPython::buffering,
@@ -191,13 +209,25 @@ namespace roboptim
 
     const ToPython& ToPython::operator << (const char* cmd) const
     {
-      PyRun_SimpleString (cmd);
+      if (PyRun_SimpleString (cmd) == -1)
+      {
+        throw std::runtime_error
+          ((boost::format ("error occurred in Python code with command:\n%1%")
+            % cmd).str ());
+      }
+
       return *this;
     }
 
     const ToPython& ToPython::operator << (const std::string& cmd) const
     {
-      PyRun_SimpleString (cmd.c_str ());
+      if (PyRun_SimpleString (cmd.c_str ()) == -1)
+      {
+        throw std::runtime_error
+          ((boost::format ("error occurred in Python code with command:\n%1%")
+            % cmd.c_str ()).str ());
+      }
+
       return *this;
     }
 

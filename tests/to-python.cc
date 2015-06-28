@@ -40,6 +40,9 @@ BOOST_AUTO_TEST_CASE (to_python)
      << "ar[0,1] = 42."
      << "print(ar.max())";
 
+  // Send a wrong command
+  BOOST_CHECK_THROW (tp << "foo 42", std::runtime_error);
+
   // Flush to output
   tp >> (*output);
 

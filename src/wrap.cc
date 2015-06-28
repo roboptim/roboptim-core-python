@@ -2,21 +2,10 @@
 
 #include <boost/variant/static_visitor.hpp>
 #include <boost/variant/apply_visitor.hpp>
-#include <boost/format.hpp>
 
 #include "wrap.hh"
 
-#include <frameobject.h>
-
-// Python 3 support
-#if PY_MAJOR_VERSION >= 3
-# define PyInt_FromLong      PyLong_FromLong
-# define PyInt_AsLong        PyLong_AsLong
-# define PyInt_Check         PyLong_Check
-# define PyString_FromString PyBytes_FromString
-# define PyString_Check      PyBytes_Check
-# define PyString_AsString   PyBytes_AsString
-#endif //! PY_MAJOR_VERSION
+#include "common.hh"
 
 namespace roboptim
 {
@@ -25,65 +14,6 @@ namespace roboptim
     namespace python
     {
       static const int NPY_STORAGE_ORDER = (::roboptim::StorageOrder == Eigen::RowMajor)? NPY_C_CONTIGUOUS:NPY_F_CONTIGUOUS;
-
-      namespace
-      {
-        std::string toString (PyObject* obj)
-        {
-          // string
-          if (PyString_Check (obj))
-	    {
-	      return PyString_AsString (obj);
-	    }
-          // unicode string
-          else if (PyUnicode_Check (obj))
-	    {
-	      return PyString_AsString (PyUnicode_AsUTF8String (obj));
-	    }
-          // object
-          else
-	    {
-	      PyObject* pyStr = PyObject_Str (obj);
-	      std::string str = PyString_AsString (pyStr);
-	      Py_DECREF (pyStr);
-	      return str;
-	    }
-        }
-
-        void checkPythonError ()
-        {
-          // Catch error (if any)
-          // TODO: improve the trace
-          PyObject *ptype, *pvalue, *ptraceback;
-          PyErr_Fetch (&ptype, &pvalue, &ptraceback);
-          if (ptype)
-	    {
-	      std::string strErrorMessage = toString (pvalue);
-	      std::string strTraceback = "";
-
-	      PyThreadState* tstate = PyThreadState_GET ();
-	      if (tstate && tstate->frame)
-		{
-		  PyFrameObject* frame = tstate->frame;
-
-		  strTraceback += "Python stack trace:\n";
-		  while (frame)
-		    {
-		      int line = frame->f_lineno;
-		      const char* filename = PyString_AsString (frame->f_code->co_filename);
-		      const char* funcname = PyString_AsString (frame->f_code->co_name);
-		      strTraceback += (boost::format ("    %1%(%2%): %3%\n")
-				       % filename % line % funcname).str ();
-		      frame = frame->f_back;
-		    }
-		}
-
-	      throw std::runtime_error
-		((boost::format ("Error occurred in Python code: %1%\n%2%")
-		  % strErrorMessage % strTraceback).str ());
-	    }
-        }
-      } // end of unnamed namespace
 
       Function::Function (size_type inputSize,
                           size_type outputSize,
@@ -151,7 +81,7 @@ namespace roboptim
 
         PyObject* resultPy = PyEval_CallObject (computeCallback_, arglist);
 
-        checkPythonError ();
+        ::roboptim::python::checkPythonError ();
 
         Py_DECREF (arglist);
         Py_XDECREF(resultPy);
@@ -274,7 +204,7 @@ namespace roboptim
 
 	PyObject* resultPy = PyEval_CallObject (gradientCallback_, arglist);
 
-        checkPythonError ();
+        ::roboptim::python::checkPythonError ();
 
 	Py_DECREF (arglist);
 	Py_XDECREF(resultPy);
@@ -349,7 +279,7 @@ namespace roboptim
 
 	    PyObject* resultPy = PyEval_CallObject (jacobianCallback_, arglist);
 
-	    checkPythonError ();
+	    ::roboptim::python::checkPythonError ();
 
 	    Py_DECREF (arglist);
 	    Py_XDECREF(resultPy);
