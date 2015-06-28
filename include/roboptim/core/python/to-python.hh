@@ -34,7 +34,7 @@ namespace roboptim
       ToPython ();
 
       /// \brief Destructor.
-      /// This exists the Python interpreter.
+      /// This exits the Python interpreter.
       ~ToPython ();
 
       /// \brief Run a command in the Python interpreter.
