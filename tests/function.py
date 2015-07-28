@@ -147,6 +147,7 @@ class TestFunctionPy(unittest.TestCase):
         self.assertEqual ("square function (differentiable function)", "%s" % cost)
         problem = roboptim.core.PyProblem (cost)
         print (problem)
+        self.assertEqual (problem.constraints, [])
 
     def test_solver(self):
         cost = Square()
@@ -166,6 +167,8 @@ class TestFunctionPy(unittest.TestCase):
 
         g2 = DoubleSquare ()
         problem.addConstraint (g2, numpy.array ([[-1., 10.],[2., 3.]]))
+
+        self.assertEqual (problem.constraints, [g1, g2])
 
         solver = roboptim.core.PySolver ("ipopt", problem)
         print (solver)

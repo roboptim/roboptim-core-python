@@ -287,6 +287,7 @@ class PyProblem(object):
     def __init__(self, cost):
         self.cost = cost
         self._problem = Problem (cost._function)
+        self._constraints = list()
 
     def __str__ (self):
         return strProblem (self._problem)
@@ -317,6 +318,11 @@ class PyProblem(object):
 
     def addConstraint (self, constraint, bounds):
         addConstraint (self._problem, constraint._function, bounds)
+        self._constraints.append (constraint)
+
+    @property
+    def constraints(self):
+        return self._constraints
 
 
 class PySolver(object):
