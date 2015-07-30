@@ -1862,12 +1862,13 @@ addConstraint (PyObject*, PyObject* args)
   problem_t* problem = 0;
   Function* function = 0;
   PyObject* py_bounds = 0;
+  PyObject* py_scaling = 0;
 
   if (!PyArg_ParseTuple
-      (args, "O&O&O",
+      (args, "O&O&OO",
        &detail::problemConverter, &problem,
        &detail::functionConverter, &function,
-       &py_bounds))
+       &py_bounds, &py_scaling))
     return 0;
 
   if (!problem)
@@ -1929,9 +1930,32 @@ addConstraint (PyObject*, PyObject* args)
 	  return 0;
 	}
 
+      double scaling = 1.;
+      if (py_scaling != Py_None)
+	{
+	  if (PyFloat_Check (py_scaling))
+	    {
+	      scaling = PyFloat_AsDouble (py_scaling);
+	    }
+	  else if (PyList_Check (py_scaling)
+		   && (PyList_Size (py_scaling) == 1)
+		   && (PyFloat_Check (PyList_GetItem (py_scaling, 0))))
+	    {
+	      PyObject* tmp = PyList_GetItem (py_scaling, 0);
+	      scaling = PyFloat_AsDouble (tmp);
+	    }
+	  else
+	    {
+	      PyErr_SetString (PyExc_TypeError,
+			       "scaling should be a float or a list of floats.");
+	      return 0;
+	    }
+	}
+
       problem->addConstraint (constraint,
 			      Function::makeInterval (PyFloat_AsDouble (py_min),
-						      PyFloat_AsDouble (py_max)));
+						      PyFloat_AsDouble (py_max)),
+			      scaling);
     }
   // Bounds = vector of pairs
   else if (is_np_array
@@ -1943,6 +1967,28 @@ addConstraint (PyObject*, PyObject* args)
 
       scaling_t scaling (constraint->outputSize (), 1.);
       intervals_t bounds (constraint->outputSize ());
+
+      if (py_scaling != Py_None)
+	{
+	  if (PyList_Check (py_scaling)
+	      && (PyList_Size (py_scaling) == constraint->outputSize ()))
+	    {
+	      for (int i = 0; i < constraint->outputSize (); ++i)
+		{
+		  PyObject* tmp = PyList_GetItem (py_scaling, i);
+		  if (PyFloat_Check (tmp))
+		    {
+		      scaling[i] = PyFloat_AsDouble (tmp);
+		    }
+		}
+	    }
+	  else
+	    {
+	      PyErr_SetString (PyExc_TypeError,
+			       "scaling should be a list of floats.");
+	      return 0;
+	    }
+	}
 
       for (Function::size_type i = 0; i < constraint->outputSize (); ++i)
 	{

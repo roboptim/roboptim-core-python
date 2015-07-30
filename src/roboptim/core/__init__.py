@@ -316,8 +316,8 @@ class PyProblem(object):
     def argumentScaling(self, value):
         setArgumentScaling (self._problem, value)
 
-    def addConstraint (self, constraint, bounds):
-        addConstraint (self._problem, constraint._function, bounds)
+    def addConstraint (self, constraint, bounds, scaling = None):
+        addConstraint (self._problem, constraint._function, bounds, scaling)
         self._constraints.append (constraint)
 
     @property

@@ -168,7 +168,13 @@ class TestFunctionPy(unittest.TestCase):
         g2 = DoubleSquare ()
         problem.addConstraint (g2, numpy.array ([[-1., 10.],[2., 3.]]))
 
-        self.assertEqual (problem.constraints, [g1, g2])
+        g3 = Square ()
+        problem.addConstraint (g3, [-1., 10.,], 0.1)
+
+        g4 = DoubleSquare ()
+        problem.addConstraint (g4, numpy.array ([[-1., 10.],[2., 3.]]), [0.1, 0.2])
+
+        self.assertEqual (problem.constraints, [g1, g2, g3, g4])
 
         solver = roboptim.core.PySolver ("ipopt", problem)
         print (solver)
