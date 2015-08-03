@@ -24,13 +24,14 @@
 using namespace roboptim;
 using namespace roboptim::python;
 
-boost::shared_ptr<boost::test_tools::output_test_stream> output;
+typedef boost::shared_ptr<boost::test_tools::output_test_stream>
+output_ptr;
 
-BOOST_FIXTURE_TEST_SUITE (core, TestSuiteConfiguration)
+BOOST_AUTO_TEST_SUITE (to_python)
 
-BOOST_AUTO_TEST_CASE (to_python)
+BOOST_AUTO_TEST_CASE (redir)
 {
-  output = retrievePattern ("to-python");
+  output_ptr output = retrievePattern ("to-python");
 
   ToPython tp;
 
@@ -48,6 +49,29 @@ BOOST_AUTO_TEST_CASE (to_python)
 
   // Should do nothing
   tp >> (*output);
+
+  std::cout << output->str () << std::endl;
+  BOOST_CHECK (output->match_pattern ());
+}
+
+BOOST_AUTO_TEST_CASE (simultaneous)
+{
+  output_ptr output = retrievePattern ("to-python-simultaneous");
+
+  ToPython tp1;
+
+  tp1 << "print(\"foo\")";
+
+  {
+    ToPython tp2;
+    tp2 << "print(\"bar\")";
+    tp2 >> (*output);
+  }
+
+  tp1 << "print(42)";
+
+  // Flush to output
+  tp1 >> (*output);
 
   std::cout << output->str () << std::endl;
   BOOST_CHECK (output->match_pattern ());

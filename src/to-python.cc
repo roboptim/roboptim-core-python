@@ -189,22 +189,32 @@ namespace roboptim
     /********************************
      *  Implementation of ToPython  *
      ********************************/
+    int ToPython::instances_ = 0;
 
     ToPython::ToPython () : buffer_ ()
     {
-      PyImport_AppendInittab ("redir", PyInit_redir);
-      Py_Initialize ();
-      PyImport_ImportModule ("redir");
+      if (!instances_)
+      {
+        PyImport_AppendInittab ("redir", PyInit_redir);
+        Py_Initialize ();
+        PyImport_ImportModule ("redir");
 
-      // Switch sys.stdout to custom handler
-      stdout_write_type write = boost::bind (&ToPython::buffering,
-                                             this, _1);
-      set_stdout (write);
+        // Switch sys.stdout to custom handler
+        stdout_write_type write = boost::bind (&ToPython::buffering,
+                                               this, _1);
+        set_stdout (write);
+      }
+
+      // Increment the instance counter
+      instances_++;
     }
 
     ToPython::~ToPython ()
     {
-      Py_Exit (0);
+      // Decrement the instance counter
+      instances_--;
+
+      if (!instances_) Py_Finalize ();
     }
 
     const ToPython& ToPython::operator << (const char* cmd) const

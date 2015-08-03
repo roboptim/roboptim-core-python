@@ -25,6 +25,7 @@ namespace roboptim
   namespace python
   {
     /// \brief Helper to run Python commands in the Python interpreter.
+    /// WARNING: this is not thread-safe for now (GIL etc.).
     class ToPython
     {
     public:
@@ -50,6 +51,9 @@ namespace roboptim
       void operator >> (std::ostream& o);
 
     private:
+      /// \brief Number of instances.
+      static int instances_;
+
       /// \brief Buffering callback.
       /// \param s string added to the buffer.
       void buffering (const std::string& s);
