@@ -1178,7 +1178,7 @@ createProblem (PyObject*, PyObject* args)
       return 0;
     }
 
-  problem_t* problem = new problem_t (*dfunction);
+  problem_t* problem = new problem_t (*costFunction);
   PyObject* problemPy =
     PyCapsule_New (problem, ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME,
 		   &detail::destructor<problem_t>);
@@ -1952,7 +1952,7 @@ addConstraint (PyObject*, PyObject* args)
 	    }
 	}
 
-      problem->addConstraint (constraint,
+      problem->addConstraint (boost::static_pointer_cast< ::roboptim::DifferentiableFunction>(constraint),
 			      Function::makeInterval (PyFloat_AsDouble (py_min),
 						      PyFloat_AsDouble (py_max)),
 			      scaling);
@@ -1997,7 +1997,8 @@ addConstraint (PyObject*, PyObject* args)
 	  bounds[i].second = * (double*) (PyArray_GETPTR2 (py_bounds, i, 1));
 	}
 
-      problem->addConstraint (constraint, bounds, scaling);
+      problem->addConstraint (boost::static_pointer_cast< ::roboptim::DifferentiableFunction>(constraint),
+                              bounds, scaling);
     }
   else
     {

@@ -85,6 +85,13 @@ namespace roboptim
 
         PyObject* getComputeCallback () const;
 
+        ROBOPTIM_DEFINE_FLAG_TYPE();
+        virtual flag_t getFlags() const
+        {
+          return flags;
+        }
+        static const flag_t flags = ::roboptim::Function::flags;
+
       private:
         PyObject* computeCallback_;
       };
@@ -129,6 +136,13 @@ namespace roboptim
         void
 	setJacobianCallback (PyObject* callback);
 
+        ROBOPTIM_DEFINE_FLAG_TYPE();
+        virtual flag_t getFlags() const
+        {
+          return flags;
+        }
+        static const flag_t flags = ::roboptim::DifferentiableFunction::flags;
+
       private:
         PyObject* gradientCallback_;
         PyObject* jacobianCallback_;
@@ -160,6 +174,13 @@ namespace roboptim
 	impl_hessian (hessian_ref /*hessian*/,
 		      const_argument_ref /*argument*/,
 		      size_type /*functionId*/) const;
+
+        ROBOPTIM_DEFINE_FLAG_TYPE();
+        virtual flag_t getFlags() const
+        {
+          return flags;
+        }
+        static const flag_t flags = ::roboptim::TwiceDifferentiableFunction::flags;
 
       private:
         PyObject* hessianCallback_;
@@ -353,17 +374,8 @@ namespace roboptim
   } // end of namespace core.
 } // end of namespace roboptim.
 
-typedef roboptim::Problem<
-  ::roboptim::DifferentiableFunction,
-  boost::mpl::vector< ::roboptim::LinearFunction,
-		      ::roboptim::DifferentiableFunction> >
-problem_t;
-
-typedef roboptim::Solver<
-  ::roboptim::DifferentiableFunction,
-  boost::mpl::vector< ::roboptim::LinearFunction,
-		      ::roboptim::DifferentiableFunction> >
-solver_t;
+typedef roboptim::Problem< ::roboptim::EigenMatrixDense> problem_t;
+typedef roboptim::Solver< ::roboptim::EigenMatrixDense> solver_t;
 
 typedef roboptim::SolverFactory<solver_t> factory_t;
 typedef roboptim::OptimizationLogger<solver_t> logger_t;

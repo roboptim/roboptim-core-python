@@ -298,10 +298,6 @@ class TestSolver(unittest.TestCase):
         self.assertRaises(RuntimeError,
                           roboptim.core.Solver, "none", problem)
 
-        # Constraint list type mismatch
-        self.assertRaises(RuntimeError,
-                          roboptim.core.Solver, "dummy", problem)
-
         solver = roboptim.core.Solver ("ipopt", problem)
         self.assertTrue(roboptim.core.strSolver (solver))
         roboptim.core.solve (solver)
