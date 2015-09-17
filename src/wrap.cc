@@ -1163,14 +1163,13 @@ getStorageOrder (PyObject*, PyObject*)
 static PyObject*
 createProblem (PyObject*, PyObject* args)
 {
-  Function* costFunction = 0;
-  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &costFunction))
+  Function* cost = 0;
+  if (!PyArg_ParseTuple(args, "O&", &detail::functionConverter, &cost))
     return 0;
 
-  DifferentiableFunction* dfunction =
-    dynamic_cast<DifferentiableFunction*> (costFunction);
+  DifferentiableFunction* dCost = dynamic_cast<DifferentiableFunction*> (cost);
 
-  if (!dfunction)
+  if (!dCost)
     {
       PyErr_SetString
 	(PyExc_TypeError,
@@ -1178,7 +1177,17 @@ createProblem (PyObject*, PyObject* args)
       return 0;
     }
 
-  problem_t* problem = new problem_t (*costFunction);
+  // If we just used a boost::shared_ptr, the cost function would be freed when the
+  // problem disappears, so we use a custom deleter that keeps track of the
+  // Python object's reference counter to prevent that.
+  boost::shared_ptr<DifferentiableFunction> costPtr
+    = detail::to_shared_ptr<DifferentiableFunction>
+      (dCost, PyTuple_GetItem (args, 0));
+  assert (!!costPtr);
+
+  problem_t* problem = new problem_t
+    (boost::static_pointer_cast< ::roboptim::DifferentiableFunction> (costPtr));
+
   PyObject* problemPy =
     PyCapsule_New (problem, ROBOPTIM_CORE_PROBLEM_CAPSULE_NAME,
 		   &detail::destructor<problem_t>);
