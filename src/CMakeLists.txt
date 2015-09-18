@@ -17,6 +17,9 @@ SET_TARGET_PROPERTIES(roboptim-core-python
   PROPERTIES SOVERSION 3 VERSION 3.1.0)
 INSTALL(TARGETS roboptim-core-python DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
+# Add library to pkg-config file.
+PKG_CONFIG_APPEND_LIBS(roboptim-core-python)
+
 #######################################################################
 #                            Python module                            #
 #######################################################################
