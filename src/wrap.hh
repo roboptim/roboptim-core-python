@@ -319,7 +319,8 @@ namespace roboptim
         typedef std::vector<callback_ptr> callbacks_t;
 
         typedef roboptim::callback::Multiplexer<solver_t> multiplexer_t;
-        typedef typename multiplexer_t::callback_t callbackFunction_t;
+        typedef typename multiplexer_t::solverCallback_t::callback_t
+          callbackFunction_t;
 
       public:
         Multiplexer (factory_ptr factory);

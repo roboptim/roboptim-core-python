@@ -3,6 +3,8 @@
 
 # include <boost/bind.hpp>
 
+# include <roboptim/core/callback/wrapper.hh>
+
 namespace roboptim
 {
   namespace core
@@ -42,7 +44,9 @@ namespace roboptim
       {
         callbacks_.push_back (callback);
         multiplexer_.callbacks ().push_back
-          (boost::apply_visitor (MultiplexerCallbackVisitor<S> (), callback));
+          (boost::make_shared<callback::Wrapper<solver_t> >
+           (boost::apply_visitor (MultiplexerCallbackVisitor<S> (),
+                                  callback)));
       }
 
       template <typename S>
