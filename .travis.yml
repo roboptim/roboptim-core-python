@@ -5,7 +5,7 @@ python:
 env:
   global:
   - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev coinor-libipopt-dev libblas-dev liblapack-dev libmumps-seq-dev gfortran"
-  - GIT_DEPENDENCIES="roboptim/roboptim-core;dev roboptim/roboptim-core-plugin-ipopt;dev"
+  - GIT_DEPENDENCIES="roboptim/roboptim-core roboptim/roboptim-core-plugin-ipopt"
   - GH_USERNAME=thomas-moulard
   - GH_REPO=roboptim/roboptim-core-python
   - LCOV_IGNORE_RULES="*tests*"
