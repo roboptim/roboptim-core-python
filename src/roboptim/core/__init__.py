@@ -13,13 +13,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 # plugin cannot access local symbols of roboptim-core. This is not ideal, but
 # at least plugins do not need to link with roboptim-core themselves. A better
 # solution may be implemented later on.
-# As for the Boost dependencies, we need them as well since we use an
-# OptimizationLogger (header only) which depends on extra Boost libraries.
-# TODO: avoid these Boost dependencies...
 from ctypes import CDLL, RTLD_GLOBAL
-CDLL("libboost_date_time.so", RTLD_GLOBAL)
-CDLL("libboost_system.so", RTLD_GLOBAL)
-CDLL("libboost_filesystem.so", RTLD_GLOBAL)
 CDLL("libroboptim-core.so", RTLD_GLOBAL)
 
 from .wrap import *
