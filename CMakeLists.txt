@@ -37,7 +37,7 @@ SETUP_PROJECT()
 SET(BOOST_COMPONENTS filesystem system thread date_time
   unit_test_framework)
 SEARCH_FOR_BOOST()
-ADD_REQUIRED_DEPENDENCY("roboptim-core >= 3.1")
+ADD_REQUIRED_DEPENDENCY("roboptim-core >= 3.2")
 
 # Python 2 and 3 are supported
 FINDPYTHON()
