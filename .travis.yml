@@ -30,7 +30,7 @@ script:
   - export PYTHON_INCLUDE_DIR="`find /usr/include -name Python.h -printf '%h\n' | grep \"python${TRAVIS_PYTHON_VERSION}\"`"
   - export PYTHON_LIBRARY="`find /usr/lib -name \"libpython${TRAVIS_PYTHON_VERSION}*.so\" -print -quit`"
   - export CMAKE_ADDITIONAL_OPTIONS="-DPython_ADDITIONAL_VERSIONS=${TRAVIS_PYTHON_VERSION} -DPythonLibs_FIND_VERSION=${TRAVIS_PYTHON_VERSION} -DPYTHON_EXECUTABLE=${VIRTUAL_ENV}/bin/python -DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} -DPYTHON_PACKAGES_PATH=${VIRTUAL_ENV}/lib/python${TRAVIS_PYTHON_VERSION}/site-packages/"
-  - export LD_LIBRARY_PATH="/tmp/_travis/install/lib/roboptim-core/"
+  - export LD_LIBRARY_PATH="/tmp/_ci/install/lib/roboptim-core/"
   - ./.travis/run build
 after_success:
   # Print Ipopt logs even after success
