@@ -1,0 +1,14 @@
+---
+BasedOnStyle: Google
+BreakBeforeBraces: Allman
+AccessModifierOffset: -2
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+KeepEmptyLinesAtTheStartOfBlocks: true
+NamespaceIndentation: All
+SpaceBeforeParens: Always
+SpacesBeforeTrailingComments: 1
+...
