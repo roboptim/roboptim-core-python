@@ -2641,6 +2641,9 @@ toDict<result_t> (result_t& result)
     }
   PyDict_SetItemString (dict_result, "constraints", constraintsNumpy);
 
+  PyDict_SetItemString (dict_result, "constraint_violation",
+                        PyFloat_FromDouble (result.constraint_violation));
+
   npy_size = static_cast<npy_intp> (result.lambda.size ());
   PyObject* lambdaNumpy =
     PyArray_SimpleNewFromData (1, &npy_size,

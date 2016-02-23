@@ -57,8 +57,6 @@ static const char* ROBOPTIM_CORE_OPTIMIZATION_LOGGER_CAPSULE_NAME =
   "roboptim_core_optimization_logger";
 static const char* ROBOPTIM_CORE_RESULT_CAPSULE_NAME =
   "roboptim_core_result";
-static const char* ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME =
-  "roboptim_core_result_with_warnings";
 static const char* ROBOPTIM_CORE_SOLVER_ERROR_CAPSULE_NAME =
   "roboptim_core_solver_error";
 
@@ -383,7 +381,6 @@ typedef roboptim::OptimizationLogger<solver_t> logger_t;
 typedef roboptim::callback::Multiplexer<solver_t> multiplexer_t;
 
 typedef roboptim::Result result_t;
-typedef roboptim::ResultWithWarnings resultWithWarnings_t;
 typedef roboptim::SolverError solverError_t;
 typedef roboptim::Parameter parameter_t;
 typedef solver_t::parameters_t parameters_t;
@@ -411,7 +408,6 @@ namespace detail
   int multiplexerConverter (PyObject* obj, rcp::Multiplexer<solver_t>** address);
   int solverStateConverter (PyObject* obj, solverState_t** address);
   int resultConverter (PyObject* obj, result_t** address);
-  int resultWithWarningsConverter (PyObject* obj, resultWithWarnings_t** address);
   int solverErrorConverter (PyObject* obj, solverError_t** address);
 
   struct ParameterValueVisitor;
