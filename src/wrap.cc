@@ -556,17 +556,6 @@ namespace detail
   }
 
   template <>
-  void destructor<resultWithWarnings_t> (PyObject* obj)
-  {
-    resultWithWarnings_t* ptr = static_cast<resultWithWarnings_t*>
-      (PyCapsule_GetPointer
-       (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
-    assert (ptr && "failed to retrieve pointer from capsule");
-    if (ptr)
-      delete ptr;
-  }
-
-  template <>
   void destructor<solverError_t> (PyObject* obj)
   {
     solverError_t* ptr = static_cast<solverError_t*>
@@ -769,15 +758,6 @@ namespace detail
 	  (PyCapsule_GetPointer
 	   (obj, ROBOPTIM_CORE_RESULT_CAPSULE_NAME));
       }
-    // Try upcasting
-    // TODO: find a better way to handle that
-    else if (std::strcmp (capsule_name,
-                          ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME) == 0)
-      {
-	ptr = static_cast<result_t*>
-	  (PyCapsule_GetPointer
-	   (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
-      }
 
     if (!ptr)
       {
@@ -787,26 +767,6 @@ namespace detail
 	return 0;
       }
 
-    *address = ptr;
-    return 1;
-  }
-
-  int
-  resultWithWarningsConverter (PyObject* obj, resultWithWarnings_t** address)
-  {
-    assert (address);
-
-    resultWithWarnings_t* ptr = static_cast<resultWithWarnings_t*>
-      (PyCapsule_GetPointer
-       (obj, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME));
-
-    if (!ptr)
-      {
-	PyErr_SetString
-	  (PyExc_TypeError,
-	   "ResultWithWarnings object expected but another type was passed");
-	return 0;
-      }
     *address = ptr;
     return 1;
   }
@@ -2061,16 +2021,6 @@ minimum (PyObject*, PyObject* args)
 	return Py_BuildValue
 	  ("(s,N)", ROBOPTIM_CORE_RESULT_CAPSULE_NAME, resultPy);
       }
-    case solver_t::SOLVER_VALUE_WARNINGS:
-      {
-	resultWithWarnings_t* warn =
-	  new resultWithWarnings_t (boost::get<resultWithWarnings_t> (result));
-	PyObject* warnPy =
-	  PyCapsule_New (warn, ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME,
-			 &detail::destructor<resultWithWarnings_t>);
-	return Py_BuildValue
-	  ("(s,N)", ROBOPTIM_CORE_RESULT_WITH_WARNINGS_CAPSULE_NAME, warnPy);
-      }
     case solver_t::SOLVER_ERROR:
       {
 	solverError_t* err = new solverError_t
@@ -2702,6 +2652,15 @@ toDict<result_t> (result_t& result)
     }
   PyDict_SetItemString (dict_result, "lambda", lambdaNumpy);
 
+  // Warnings stored as a list
+  PyObject* warnings = PyList_New (result.warnings.size ());
+  for (size_t i = 0; i < result.warnings.size (); ++i)
+    {
+      PyList_SetItem (warnings, i,
+                      PyString_FromString (result.warnings[i].what ()));
+    }
+  PyDict_SetItemString (dict_result, "warnings", warnings);
+
   return Py_BuildValue ("O", dict_result);
 }
 
@@ -2727,44 +2686,6 @@ toDict<result_t> (PyObject*, PyObject* args)
     }
 
   return toDict<result_t> (*result);
-}
-
-template <>
-PyObject*
-toDict<resultWithWarnings_t> (PyObject* obj, PyObject* args)
-{
-  PyObject* dict_result = toDict<result_t> (obj, args);
-
-  if (!dict_result)
-    {
-      PyErr_SetString (PyExc_TypeError,
-                       "1st argument must be inherited from result.");
-      return 0;
-    }
-
-  resultWithWarnings_t* result = 0;
-
-  if (!PyArg_ParseTuple (args, "O&",
-			 &detail::resultWithWarningsConverter, &result))
-    return 0;
-
-  if (!result)
-    {
-      PyErr_SetString (PyExc_TypeError,
-                       "1st argument must be a result with warnings.");
-      return 0;
-    }
-
-  // Warnings stored as a list
-  PyObject* warnings = PyList_New (result->warnings.size ());
-  for (size_t i = 0; i < result->warnings.size (); ++i)
-    {
-      PyList_SetItem (warnings, i,
-                      PyString_FromString (result->warnings[i].what ()));
-    }
-  PyDict_SetItemString (dict_result, "warnings", warnings);
-
-  return Py_BuildValue ("O", dict_result);
 }
 
 template <>
@@ -2870,26 +2791,6 @@ print<result_t> (PyObject*, PyObject* args)
   result_t* obj = 0;
   if (!PyArg_ParseTuple
       (args, "O&", &detail::resultConverter, &obj))
-    return 0;
-  if (!obj)
-    {
-      PyErr_SetString (PyExc_TypeError, "failed to retrieve object");
-      return 0;
-    }
-
-  std::stringstream ss;
-  ss << (*obj);
-
-  return Py_BuildValue ("s", ss.str ().c_str ());
-}
-
-template <>
-PyObject*
-print<resultWithWarnings_t> (PyObject*, PyObject* args)
-{
-  resultWithWarnings_t* obj = 0;
-  if (!PyArg_ParseTuple
-      (args, "O&", &detail::resultWithWarningsConverter, &obj))
     return 0;
   if (!obj)
     {
@@ -3045,8 +2946,6 @@ static PyMethodDef RobOptimCoreMethods[] =
     // Result functions
     {"resultToDict", toDict<result_t>, METH_VARARGS,
      "Convert a Result object to a Python dictionary."},
-    {"resultWithWarningsToDict", toDict<resultWithWarnings_t>, METH_VARARGS,
-     "Convert a ResultWithWarnings object to a Python dictionary."},
     {"solverErrorToDict", toDict<solverError_t>, METH_VARARGS,
      "Convert a SolverError object to a Python dictionary."},
 
@@ -3072,8 +2971,6 @@ static PyMethodDef RobOptimCoreMethods[] =
     {"strSolverState", print<solverState_t>, METH_VARARGS,
      "Print a solver state as a Python string."},
     {"strResult", print<result_t>, METH_VARARGS,
-     "Print a result as a Python string."},
-    {"strResultWithWarnings", print<resultWithWarnings_t>, METH_VARARGS,
      "Print a result as a Python string."},
     {"strSolverError", print<solverError_t>, METH_VARARGS,
      "Print a solver error as a Python string."},

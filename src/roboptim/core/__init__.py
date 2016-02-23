@@ -353,8 +353,6 @@ class PySolver(object):
         (objType, obj) = minimum (self._solver)
         if objType == "roboptim_core_result":
             return PyResult (obj)
-        elif objType == "roboptim_core_result_with_warnings":
-            return PyResultWithWarnings (obj)
         elif objType == "roboptim_core_solver_error":
             return PySolverError (obj)
         else:
@@ -459,15 +457,6 @@ class PyResult(object):
     @property
     def lagrange(self):
         return self._dict["lambda"]
-
-
-class PyResultWithWarnings(PyResult):
-    def __init__(self, _result):
-        self._result = _result
-        self._dict = resultWithWarningsToDict (_result)
-
-    def __str__ (self):
-        return strResultWithWarnings (self._result)
 
     @property
     def warnings(self):
