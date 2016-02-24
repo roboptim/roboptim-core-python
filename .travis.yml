@@ -1,7 +1,8 @@
 language: python
 python:
-  - "2.7"
+  - "2.7.3"
   - "3.4"
+  - "3.5"
 env:
   global:
   - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev coinor-libipopt-dev libblas-dev liblapack-dev libmumps-seq-dev gfortran"
