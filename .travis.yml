@@ -1,6 +1,6 @@
 language: python
 python:
-  - "2.7.3"
+  - "2.7"
   - "3.4"
   - "3.5"
 env:
@@ -41,3 +41,8 @@ after_success:
   - export CC=gcc
   - ./.travis/run after_success
 after_failure: ./.travis/run after_failure
+
+matrix:
+  allow_failures:
+    # Known issue with virtualenv
+    - python: "2.7"
