@@ -5,7 +5,7 @@ python:
   - "3.5"
 env:
   global:
-  - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev coinor-libipopt-dev libblas-dev liblapack-dev libmumps-seq-dev gfortran"
+  - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev"
   - GIT_DEPENDENCIES="roboptim/roboptim-core roboptim/roboptim-core-plugin-ipopt"
   - GH_USERNAME=thomas-moulard
   - GH_REPO=roboptim/roboptim-core-python
@@ -26,6 +26,7 @@ before_install:
   - if [ "${TRAVIS_PYTHON_VERSION}" == "2.7" ]; then pip install futures; fi;
   - pip install matplotlib
   - ./.travis/dependencies/eigen-3.2
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then CC=gcc CXX=g++ ./.travis/dependencies/ipopt; fi
   - ./.travis/run before_install
 script:
   - export PYTHON_INCLUDE_DIR="`find /usr/include -name Python.h -printf '%h\n' | grep \"python${TRAVIS_PYTHON_VERSION}\"`"
