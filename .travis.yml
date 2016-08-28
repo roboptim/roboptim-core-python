@@ -1,11 +1,8 @@
-language: python
-python:
-  - "2.7"
-  - "3.4"
-  - "3.5"
+sudo: required
 env:
   global:
-  - APT_DEPENDENCIES="doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev"
+  - APT_DEPENDENCIES="cmake cmake-data doxygen doxygen-latex libltdl-dev libboost-all-dev liblog4cxx10-dev"
+  - HOMEBREW_DEPENDENCIES="doxygen log4cxx ipopt openblas mumps"
   - GIT_DEPENDENCIES="roboptim/roboptim-core roboptim/roboptim-core-plugin-ipopt"
   - GH_USERNAME=thomas-moulard
   - GH_REPO=roboptim/roboptim-core-python
@@ -20,9 +17,9 @@ branches:
     - dev
     - travis
 before_install:
-  - sudo add-apt-repository ppa:fkrull/deadsnakes -y
-  - sudo apt-get update -q
-  - sudo apt-get install python${TRAVIS_PYTHON_VERSION}-dev
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo add-apt-repository ppa:fkrull/deadsnakes -y; fi;
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo apt-get update -q; fi;
+  - if [[ "${TRAVIS_OS_NAME}" == "linux" ]]; then sudo apt-get install python${TRAVIS_PYTHON_VERSION}-dev; fi;
   - if [ "${TRAVIS_PYTHON_VERSION}" == "2.7" ]; then pip install futures; fi;
   - pip install matplotlib
   - ./.travis/dependencies/eigen-3.2
@@ -30,9 +27,11 @@ before_install:
   - ./.travis/run before_install
 script:
   - export PYTHON_INCLUDE_DIR="`find /usr/include -name Python.h -printf '%h\n' | grep \"python${TRAVIS_PYTHON_VERSION}\"`"
-  - export PYTHON_LIBRARY="`find /usr/lib -name \"libpython${TRAVIS_PYTHON_VERSION}*.so\" -print -quit`"
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then export PYTHON_LIBRARY="`find /usr/lib -name \"libpython${TRAVIS_PYTHON_VERSION}*.so\" -print -quit`"; fi;
+  - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then export PYTHON_LIBRARY=#{%x(python-config --prefix).chomp}/lib/libpython2.7.dylib; fi;
   - export CMAKE_ADDITIONAL_OPTIONS="-DPython_ADDITIONAL_VERSIONS=${TRAVIS_PYTHON_VERSION} -DPythonLibs_FIND_VERSION=${TRAVIS_PYTHON_VERSION} -DPYTHON_EXECUTABLE=${VIRTUAL_ENV}/bin/python -DPYTHON_LIBRARY=${PYTHON_LIBRARY} -DPYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} -DPYTHON_PACKAGES_PATH=${VIRTUAL_ENV}/lib/python${TRAVIS_PYTHON_VERSION}/site-packages/"
-  - export LD_LIBRARY_PATH="/tmp/_ci/install/lib/roboptim-core/"
+  - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then export LD_LIBRARY_PATH=`pkg-config --variable=plugindir roboptim-core`:$LD_LIBRARY_PATH; fi
+  - if [ "${TRAVIS_OS_NAME}" == "osx" ]; then export DYLD_LIBRARY_PATH=`pkg-config --variable=plugindir roboptim-core`:$DYLD_LIBRARY_PATH; fi
   - ./.travis/run build
 after_success:
   # Print Ipopt logs even after success
@@ -47,3 +46,26 @@ matrix:
   allow_failures:
     # Known issue with virtualenv
     - python: "2.7"
+  include:
+    - os: linux
+      dist: trusty
+      language: python
+      python: "2.7"
+    - os: linux
+      dist: trusty
+      language: python
+      python: "3.5"
+    - os: linux
+      dist: precise
+      env: MASTER_PPA="george-edison55/precise-backports"
+      language: python
+      python: "2.7"
+    - os: linux
+      dist: precise
+      env: MASTER_PPA="george-edison55/precise-backports"
+      language: python
+      python: "3.5"
+    - os: osx
+      language: cpp
+      compiler: clang
+      env: TRAVIS_PYTHON_VERSION="2.7"
