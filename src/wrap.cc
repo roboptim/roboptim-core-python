@@ -52,18 +52,25 @@ namespace roboptim
 
         npy_intp inputSize = static_cast<npy_intp> (this->inputSize ());
         npy_intp outputSize = static_cast<npy_intp> (this->outputSize ());
+        npy_intp resultStride = static_cast<npy_intp>(
+            result.innerStride()*Eigen::Index(sizeof(result_ref::Scalar)));
+        npy_intp argumentStride = static_cast<npy_intp>(
+            argument.innerStride()*Eigen::Index(sizeof(argument_ref::Scalar)));
 
-        PyObject* resultNumpy =
-          PyArray_SimpleNewFromData (1, &outputSize, NPY_DOUBLE, result.data ());
+        PyObject* resultNumpy = PyArray_NewFromDescr (&PyArray_Type,
+            PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &outputSize, &resultStride, result.data (),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
         if (!resultNumpy)
 	  {
 	    PyErr_SetString (PyExc_TypeError, "cannot convert result");
 	    return;
 	  }
 
-        PyObject* argNumpy =
-          PyArray_SimpleNewFromData
-          (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
+        PyObject* argNumpy = PyArray_NewFromDescr (&PyArray_Type,
+            PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &inputSize, &argumentStride, const_cast<double*> (argument.data ()),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
         if (!argNumpy)
 	  {
 	    PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -176,7 +183,10 @@ namespace roboptim
 	  (::roboptim::core::python::Function::inputSize ());
 
 	npy_intp innerStride = static_cast<npy_intp>(
-            gradient.innerStride()*sizeof(gradient_ref::Scalar));
+            gradient.innerStride()*Eigen::Index(sizeof(gradient_ref::Scalar)));
+
+        npy_intp argumentStride = static_cast<npy_intp>(
+            argument.innerStride()*Eigen::Index(sizeof(argument_ref::Scalar)));
 
         PyObject* gradientNumpy = PyArray_NewFromDescr (&PyArray_Type,
             PyArray_DescrFromType (PyArray_DOUBLE),
@@ -189,9 +199,10 @@ namespace roboptim
             return;
           }
 
-	PyObject* argNumpy =
-	  PyArray_SimpleNewFromData
-	  (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
+        PyObject* argNumpy = PyArray_NewFromDescr (&PyArray_Type,
+            PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &inputSize, &argumentStride, const_cast<double*> (argument.data ()),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
 	if (!argNumpy)
           {
             PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -244,6 +255,8 @@ namespace roboptim
               jacobian.innerStride()*sizeof(jacobian_ref::Scalar));
             npy_intp outerStride = static_cast<npy_intp>(
               jacobian.outerStride()*sizeof(jacobian_ref::Scalar));
+            npy_intp argumentStride = static_cast<npy_intp>(
+                argument.innerStride()*Eigen::Index(sizeof(argument_ref::Scalar)));
 
 	    // Check storage order and map memory accordingly (PyArray_SimpleNewFromData
 	    // expects a row-major matrix).
@@ -252,10 +265,10 @@ namespace roboptim
 	    npy_intp strides[2] = {innerStride, outerStride};
 
 
-            jacobianNumpy = PyArray_NewFromDescr (&PyArray_Type,
-                PyArray_DescrFromType (PyArray_DOUBLE),
-                2, sizes, strides, jacobian.data(),
-                NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
+      jacobianNumpy = PyArray_NewFromDescr (&PyArray_Type,
+          PyArray_DescrFromType (PyArray_DOUBLE),
+          2, sizes, strides, jacobian.data(),
+          NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
 
 	    if (!jacobianNumpy)
 	      {
@@ -263,9 +276,10 @@ namespace roboptim
 		return;
 	      }
 
-	    PyObject* argNumpy =
-	      PyArray_SimpleNewFromData
-	      (1, &inputSize, NPY_DOUBLE, const_cast<double*> (argument.data ()));
+            PyObject* argNumpy = PyArray_NewFromDescr (&PyArray_Type,
+                PyArray_DescrFromType (PyArray_DOUBLE),
+	        1, &inputSize, &argumentStride, const_cast<double*> (argument.data ()),
+	        NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
 	    if (!argNumpy)
 	      {
 		PyErr_SetString (PyExc_TypeError, "cannot convert argument");
@@ -824,9 +838,14 @@ namespace detail
     PyObject* operator () (roboptim::Function::const_vector_ref v) const
     {
       npy_intp n = static_cast<npy_intp> (v.size ());
+      npy_intp vStride = static_cast<npy_intp>(
+          v.innerStride()*Eigen::Index(
+              sizeof(roboptim::Function::vector_ref::Scalar)));
 
-      return PyArray_SimpleNewFromData
-        (1, &n, NPY_DOUBLE, const_cast<double*> (v.data ()));
+      return PyArray_NewFromDescr (&PyArray_Type,
+          PyArray_DescrFromType (PyArray_DOUBLE),
+          1, &n, &vStride, const_cast<double*> (v.data ()),
+          NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
     }
   };
 
@@ -911,9 +930,13 @@ namespace detail
     PyObject* operator () (roboptim::Function::const_vector_ref v) const
     {
       npy_intp n = static_cast<npy_intp> (v.size ());
+      npy_intp vStride = static_cast<npy_intp>(
+          v.innerStride()*Eigen::Index(sizeof(roboptim::Function::vector_ref::Scalar)));
 
-      return PyArray_SimpleNewFromData
-        (1, &n, NPY_DOUBLE, const_cast<double*> (v.data ()));
+      return PyArray_NewFromDescr (&PyArray_Type,
+            PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &n, &vStride, const_cast<double*> (v.data ()),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
     }
   };
 
@@ -2441,8 +2464,12 @@ getSolverStateX (PyObject*, PyObject* args)
     }
 
   npy_intp n = static_cast<npy_intp> (state->x ().size ());
-  PyObject* vec = PyArray_SimpleNewFromData (1, &n,
-                                             NPY_DOUBLE, state->x ().data ());
+  npy_intp xStride = static_cast<npy_intp>(
+    state->x().innerStride()*Eigen::Index(sizeof(solverState_t::argument_t::Scalar)));
+  PyObject* vec = PyArray_NewFromDescr (&PyArray_Type,
+      PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &n, &xStride, state->x ().data (),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
   if (!vec)
     {
       PyErr_SetString (PyExc_TypeError, "cannot convert state.x");
@@ -2614,9 +2641,12 @@ toDict<result_t> (result_t& result)
 
 
   npy_intp npy_size = static_cast<npy_intp> (result.x.size ());
-  PyObject* xNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result.x.data ());
+  npy_intp npy_stride = static_cast<npy_intp>(
+    result.x.innerStride()*Eigen::Index(sizeof(result_t::argument_t::Scalar)));
+  PyObject* xNumpy = PyArray_NewFromDescr (&PyArray_Type,
+    PyArray_DescrFromType (PyArray_DOUBLE),
+	  1, &npy_size, &npy_stride, result.x.data (),
+	  NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
   if (!xNumpy)
     {
       PyErr_SetString (PyExc_TypeError, "cannot convert result.x");
@@ -2625,9 +2655,12 @@ toDict<result_t> (result_t& result)
   PyDict_SetItemString (dict_result, "x", xNumpy);
 
   npy_size = static_cast<npy_intp> (result.value.size ());
-  PyObject* valueNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result.value.data ());
+  npy_stride = static_cast<npy_intp>(
+    result.value.innerStride()*Eigen::Index(sizeof(result_t::result_t::Scalar)));
+  PyObject* valueNumpy = PyArray_NewFromDescr (&PyArray_Type,
+    PyArray_DescrFromType (PyArray_DOUBLE),
+	  1, &npy_size, &npy_stride, result.value.data (),
+	  NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
   if (!valueNumpy)
     {
       PyErr_SetString (PyExc_TypeError, "cannot convert result.value");
@@ -2636,9 +2669,12 @@ toDict<result_t> (result_t& result)
   PyDict_SetItemString (dict_result, "value", valueNumpy);
 
   npy_size = static_cast<npy_intp> (result.constraints.size ());
-  PyObject* constraintsNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result.constraints.data ());
+  npy_stride = static_cast<npy_intp>(
+    result.constraints.innerStride()*Eigen::Index(sizeof(result_t::result_t::Scalar)));
+  PyObject* constraintsNumpy = PyArray_NewFromDescr (&PyArray_Type,
+    PyArray_DescrFromType (PyArray_DOUBLE),
+	  1, &npy_size, &npy_stride, result.constraints.data (),
+	  NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
   if (!constraintsNumpy)
     {
       PyErr_SetString (PyExc_TypeError, "cannot convert result.constraints");
@@ -2650,9 +2686,12 @@ toDict<result_t> (result_t& result)
                         PyFloat_FromDouble (result.constraint_violation));
 
   npy_size = static_cast<npy_intp> (result.lambda.size ());
-  PyObject* lambdaNumpy =
-    PyArray_SimpleNewFromData (1, &npy_size,
-			       NPY_DOUBLE, result.lambda.data ());
+  npy_stride = static_cast<npy_intp>(
+    result.lambda.innerStride()*Eigen::Index(sizeof(result_t::vector_t::Scalar)));
+  PyObject* lambdaNumpy = PyArray_NewFromDescr (&PyArray_Type,
+    PyArray_DescrFromType (PyArray_DOUBLE),
+	  1, &npy_size, &npy_stride, result.lambda.data (),
+	  NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
   if (!lambdaNumpy)
     {
       PyErr_SetString (PyExc_TypeError, "cannot convert result.lambda");
