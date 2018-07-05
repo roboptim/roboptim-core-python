@@ -175,8 +175,14 @@ namespace roboptim
 	npy_intp inputSize = static_cast<npy_intp>
 	  (::roboptim::core::python::Function::inputSize ());
 
-	PyObject* gradientNumpy =
-	  PyArray_SimpleNewFromData (1, &inputSize, NPY_DOUBLE, gradient.data ());
+	npy_intp innerStride = static_cast<npy_intp>(
+            gradient.innerStride()*sizeof(gradient_ref::Scalar));
+
+        PyObject* gradientNumpy = PyArray_NewFromDescr (&PyArray_Type,
+            PyArray_DescrFromType (PyArray_DOUBLE),
+	    1, &inputSize, &innerStride, gradient.data (),
+	    NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
+
 	if (!gradientNumpy)
           {
             PyErr_SetString (PyExc_TypeError, "cannot convert result");
@@ -234,23 +240,22 @@ namespace roboptim
 	      static_cast<npy_intp> (::roboptim::core::python::Function::inputSize ());
 	    npy_intp outputSize =
 	      static_cast<npy_intp> (::roboptim::core::python::Function::outputSize ());
+            npy_intp innerStride = static_cast<npy_intp>(
+              jacobian.innerStride()*sizeof(jacobian_ref::Scalar));
+            npy_intp outerStride = static_cast<npy_intp>(
+              jacobian.outerStride()*sizeof(jacobian_ref::Scalar));
 
 	    // Check storage order and map memory accordingly (PyArray_SimpleNewFromData
 	    // expects a row-major matrix).
 	    PyObject* jacobianNumpy = NULL;
 	    npy_intp sizes[2] = {outputSize, inputSize};
+	    npy_intp strides[2] = {innerStride, outerStride};
 
-	    if (::roboptim::StorageOrder == Eigen::RowMajor)
-	      {
-		jacobianNumpy = PyArray_SimpleNewFromData (2, &sizes[0], NPY_DOUBLE,
-							   jacobian.data ());
-	      }
-	    else
-	      {
-		jacobianNumpy = PyArray_NewFromDescr (&PyArray_Type, PyArray_DescrFromType (PyArray_DOUBLE),
-						      2, sizes, NULL, jacobian.data (),
-						      NPY_WRITEABLE | NPY_F_CONTIGUOUS, NULL);
-	      }
+
+            jacobianNumpy = PyArray_NewFromDescr (&PyArray_Type,
+                PyArray_DescrFromType (PyArray_DOUBLE),
+                2, sizes, strides, jacobian.data(),
+                NPY_WRITEABLE | ::roboptim::core::python::NPY_STORAGE_ORDER, NULL);
 
 	    if (!jacobianNumpy)
 	      {
