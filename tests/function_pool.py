@@ -98,7 +98,7 @@ class TestFunctionPoolPy(unittest.TestCase):
         n = 3
         engine = Engine (n)
         np.testing.assert_almost_equal (engine.data, np.zeros (engine.n))
-        functions = [Square (engine, float(i)) for i in range (n)]
+        functions = [Square (engine, i) for i in range (n)]
         print(engine)
 
         pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy pool")
@@ -130,7 +130,7 @@ class TestFunctionPoolPy(unittest.TestCase):
         n = 3
         engine = Engine (n)
         print(engine)
-        functions = [Square (engine, float(i)) for i in range (n)]
+        functions = [Square (engine, i) for i in range (n)]
         pool = roboptim.core.PyFunctionPool (engine, functions, "Dummy FD pool")
 
         fd_rule = roboptim.core.FiniteDifferenceRule.SIMPLE
@@ -163,7 +163,7 @@ class TestFunctionPoolPy(unittest.TestCase):
         n = 3
         engine = Engine (n)
         np.testing.assert_almost_equal (engine.data, np.zeros (engine.n))
-        functions = [Square (engine, float(i)) for i in range (n)]
+        functions = [Square (engine, i) for i in range (n)]
         print(engine)
 
         pool = roboptim.core.PyFunctionPool (engine, functions, name = "Dummy pool",
