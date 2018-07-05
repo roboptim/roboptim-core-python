@@ -8,8 +8,6 @@ INCLUDE_DIRECTORIES(SYSTEM ${NUMPY_INCLUDE_DIRS})
 # Compile library
 ADD_LIBRARY(roboptim-core-python SHARED
   ${HEADERS}
-  common.hh
-  common.cc
   to-python.cc)
 
 TARGET_LINK_LIBRARIES(roboptim-core-python ${PYTHON_LIBRARIES})
@@ -27,7 +25,7 @@ PKG_CONFIG_APPEND_LIBS(roboptim-core-python)
 SET(LOCAL_MODULE_DIR "${PROJECT_BINARY_DIR}/src")
 
 # Compile module
-ADD_LIBRARY(wrap MODULE wrap.cc)
+ADD_LIBRARY(wrap MODULE common.cc wrap.cc)
 PKG_CONFIG_USE_DEPENDENCY(wrap roboptim-core)
 SET_TARGET_PROPERTIES(wrap PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY ${LOCAL_MODULE_DIR}/roboptim/core
@@ -35,8 +33,6 @@ SET_TARGET_PROPERTIES(wrap PROPERTIES
 
 # Link against Boost.
 TARGET_LINK_LIBRARIES(wrap ${Boost_LIBRARIES})
-
-TARGET_LINK_LIBRARIES(wrap roboptim-core-python)
 
 SET_TARGET_PROPERTIES(wrap PROPERTIES PREFIX "")
 

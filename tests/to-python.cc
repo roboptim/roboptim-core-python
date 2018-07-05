@@ -36,6 +36,7 @@ BOOST_AUTO_TEST_CASE (redir)
   ToPython tp;
 
   tp << "import numpy as np"
+     << "np.set_printoptions(formatter={'all': lambda x: str(x)})"
      << "ar = np.zeros((3,3))"
      << "print(ar)"
      << "ar[0,1] = 42."
