@@ -70,6 +70,9 @@ REGISTER_TEST(function_pool)
 # Check plotting support.
 REGISTER_TEST(plot)
 
+# Check numpy/roboptim matrix translation.
+REGISTER_TEST(mpc)
+
 #######################################################################
 #                             C++ library                             #
 #######################################################################
